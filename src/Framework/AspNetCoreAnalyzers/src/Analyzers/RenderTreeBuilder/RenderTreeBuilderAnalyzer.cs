@@ -32,7 +32,7 @@ public partial class RenderTreeBuilderAnalyzer : DiagnosticAnalyzer
             {
                 var invocation = (IInvocationOperation)context.Operation;
 
-                if (!IsRenderTreeBuilderMethodWithSequenceParameter(wellKnownTypes, invocation.TargetMethod))
+                if (!IsRenderTreeBuilderMethodWithSequenceParameter(wellKnownTypes, invocation.TargetMethod)) // Maybe build a HashSet of well-known methods up front?
                 {
                     return;
                 }
@@ -44,9 +44,9 @@ public partial class RenderTreeBuilderAnalyzer : DiagnosticAnalyzer
                         if (!argument.Value.Syntax.IsKind(SyntaxKind.NumericLiteralExpression))
                         {
                             context.ReportDiagnostic(Diagnostic.Create(
-                                DiagnosticDescriptors.DoNotUseNonLiteralSequenceNumbers,
+                                DiagnosticDescriptors.DoNotUseNonLiteralSequenceNumbers, // Even consts?
                                 argument.Syntax.GetLocation(),
-                                argument.Syntax.ToString()));
+                                argument.Syntax.ToString())); // Does this do the right thing with trivia?  Why include the bad fragment at all?  There's already a span
                         }
 
                         break;

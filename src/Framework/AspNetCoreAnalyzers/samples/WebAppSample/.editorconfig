@@ -1,0 +1,4 @@
+[*.{cs,vb}]
+
+# IDE0073: A source file is missing a required header
+dotnet_diagnostic.IDE0073.severity = none

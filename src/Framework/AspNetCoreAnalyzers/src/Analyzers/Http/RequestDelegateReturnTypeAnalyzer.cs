@@ -22,7 +22,7 @@ public partial class RequestDelegateReturnTypeAnalyzer : DiagnosticAnalyzer
         {
             var compilation = context.Compilation;
 
-            if (!WellKnownTypes.TryCreate(compilation, out var wellKnownTypes))
+            if (!WellKnownTypes.TryCreate(compilation, out var wellKnownTypes)) // I'm not sure what the guidance on caching is, but this seems like it will happen a lot
             {
                 return;
             }
@@ -41,7 +41,7 @@ public partial class RequestDelegateReturnTypeAnalyzer : DiagnosticAnalyzer
                         AddDiagnosticWarning(context, methodReference.Syntax.GetLocation(), returnType);
                     }
                 }
-            }, OperationKind.MethodReference);
+            }, OperationKind.MethodReference); // I think I'm missing something about where this is checked.  It kind of seems like the goal was to flag any method declaration with a certain signature shape, but maybe only when it's referenced as a method group?
             context.RegisterOperationAction(context =>
             {
                 var anonymousFunction = (IAnonymousFunctionOperation)context.Operation;
@@ -51,6 +51,7 @@ public partial class RequestDelegateReturnTypeAnalyzer : DiagnosticAnalyzer
                 {
                     // Inspect contents of anonymous function and search for return statements.
                     // Return statement of Task<T> means a value was returned.
+                    // Does this handle async lambdas properly?
                     foreach (var item in anonymousFunction.Body.Descendants())
                     {
                         if (item is IReturnOperation returnOperation &&
@@ -79,11 +80,12 @@ public partial class RequestDelegateReturnTypeAnalyzer : DiagnosticAnalyzer
         context.ReportDiagnostic(Diagnostic.Create(
             DiagnosticDescriptors.DoNotReturnValueFromRequestDelegate,
             location,
-            ((INamedTypeSymbol)returnType).TypeArguments[0].ToString()));
+            ((INamedTypeSymbol)returnType).TypeArguments[0].ToString()));// Is this the preferred way to stringify a type?
     }
 
     private static IOperation WalkDownConversion(IOperation operation)
     {
+        // Fortunately, I'm pretty sure this maxes out at 2 layers
         while (operation is IConversionOperation conversionOperation)
         {
             operation = conversionOperation.Operand;

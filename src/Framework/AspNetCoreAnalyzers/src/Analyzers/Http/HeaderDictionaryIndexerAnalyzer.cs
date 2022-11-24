@@ -31,8 +31,8 @@ public partial class HeaderDictionaryIndexerAnalyzer : DiagnosticAnalyzer
                 IsIHeadersDictionaryType(property.ContainingType))
             {
                 // Get the indexer string argument.
-                if (propertyReference.Arguments.Length == 1 &&
-                    propertyReference.Arguments[0].Value is ILiteralOperation literalOperation &&
+                if (propertyReference.Arguments.Length == 1 && // >= 1 ?
+                    propertyReference.Arguments[0].Value is ILiteralOperation literalOperation && // Probably want to handle any expression with a string constant value?
                     literalOperation.ConstantValue.Value is string indexerValue)
                 {
                     // Check that the header has a matching property on IHeaderDictionary.
@@ -169,7 +169,7 @@ public partial class HeaderDictionaryIndexerAnalyzer : DiagnosticAnalyzer
     private static void AddDiagnosticWarning(OperationAnalysisContext context, Location location, string headerName, string propertyName)
     {
         var propertiesBuilder = ImmutableDictionary.CreateBuilder<string, string>();
-        propertiesBuilder.Add("HeaderName", headerName);
+        propertiesBuilder.Add("HeaderName", headerName); // I'm not sure what the usual pattern is, but I would have thought the analyzer and the fixer would have shared a constant for this
         propertiesBuilder.Add("ResolvedPropertyName", propertyName);
 
         context.ReportDiagnostic(Diagnostic.Create(

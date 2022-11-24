@@ -76,6 +76,8 @@ public sealed class WebApplicationBuilderAnalyzer : DiagnosticAnalyzer
                 var invocation = (IInvocationOperation)context.Operation;
                 var targetMethod = invocation.TargetMethod;
 
+                // This seems like a lot of linear searching.  If we can't just build a map of forbidden methods (to DiagnosticDescriptors) up front, can we at least kick out after we find a match?
+
                 // var builder = WebApplication.CreateBuilder();
                 // builder.Host.ConfigureWebHost(x => {});
                 if (IsDisallowedMethod(
@@ -258,6 +260,9 @@ public sealed class WebApplicationBuilderAnalyzer : DiagnosticAnalyzer
                 {
                     // Take the location for the whole invocation operation as a starting point.
                     var location = operation.Syntax.GetLocation();
+
+                    // Shrinking the span seems unnecessarily fussy to me but, if it's important,
+                    // it seems like we just need to check for a dot expression and choose the RHS?
 
                     // As we're analyzing an extension method that might be chained off a number of
                     // properties, we need the location to be where the invocation of the targeted
