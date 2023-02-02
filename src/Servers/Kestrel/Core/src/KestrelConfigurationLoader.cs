@@ -478,4 +478,8 @@ public class KestrelConfigurationLoader
         path = basePath != null ? Path.Combine(basePath, $"{HostEnvironment.ApplicationName}.pfx") : null;
         return path != null;
     }
+
+    internal static void InternalMethod()
+    {
+    }
 }
