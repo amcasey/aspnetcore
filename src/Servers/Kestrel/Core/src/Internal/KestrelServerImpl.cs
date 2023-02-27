@@ -148,8 +148,10 @@ internal sealed class KestrelServerImpl : IServer
             {
                 var hasHttp1 = options.Protocols.HasFlag(HttpProtocols.Http1);
                 var hasHttp2 = options.Protocols.HasFlag(HttpProtocols.Http2);
-                var hasHttp3 = options.Protocols.HasFlag(HttpProtocols.Http3);
-                var hasTls = options.IsTls;
+                //var hasHttp3 = options.Protocols.HasFlag(HttpProtocols.Http3);
+                //var hasTls = options.IsTls;
+                var hasHttp3 = false;
+                var hasTls = false;
 
                 // Filter out invalid combinations.
 

@@ -1,13 +1,13 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.Diagnostics.CodeAnalysis;
+//using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Net;
-using System.Security.Cryptography;
-using System.Security.Cryptography.X509Certificates;
-using Microsoft.AspNetCore.Certificates.Generation;
-using Microsoft.AspNetCore.Hosting;
+//using System.Security.Cryptography;
+//using System.Security.Cryptography.X509Certificates;
+//using Microsoft.AspNetCore.Certificates.Generation;
+//using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.AspNetCore.Server.Kestrel.Core.Internal;
 using Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Certificates;
@@ -278,7 +278,7 @@ public class KestrelConfigurationLoader
 
         ConfigurationReader = new ConfigurationReader(Configuration);
 
-        LoadDefaultCert();
+        //LoadDefaultCert();
 
         foreach (var endpoint in ConfigurationReader.Endpoints)
         {
@@ -305,45 +305,45 @@ public class KestrelConfigurationLoader
             // Compare to UseHttps(httpsOptions => { })
             var httpsOptions = new HttpsConnectionAdapterOptions();
 
-            if (https)
-            {
-                // Defaults
-                Options.ApplyHttpsDefaults(httpsOptions);
+            //if (https)
+            //{
+            //    // Defaults
+            //    Options.ApplyHttpsDefaults(httpsOptions);
 
-                if (endpoint.SslProtocols.HasValue)
-                {
-                    httpsOptions.SslProtocols = endpoint.SslProtocols.Value;
-                }
-                else
-                {
-                    // Ensure endpoint is reloaded if it used the default protocol and the SslProtocols changed.
-                    endpoint.SslProtocols = ConfigurationReader.EndpointDefaults.SslProtocols;
-                }
+            //    if (endpoint.SslProtocols.HasValue)
+            //    {
+            //        httpsOptions.SslProtocols = endpoint.SslProtocols.Value;
+            //    }
+            //    else
+            //    {
+            //        // Ensure endpoint is reloaded if it used the default protocol and the SslProtocols changed.
+            //        endpoint.SslProtocols = ConfigurationReader.EndpointDefaults.SslProtocols;
+            //    }
 
-                if (endpoint.ClientCertificateMode.HasValue)
-                {
-                    httpsOptions.ClientCertificateMode = endpoint.ClientCertificateMode.Value;
-                }
-                else
-                {
-                    // Ensure endpoint is reloaded if it used the default mode and the ClientCertificateMode changed.
-                    endpoint.ClientCertificateMode = ConfigurationReader.EndpointDefaults.ClientCertificateMode;
-                }
+            //    if (endpoint.ClientCertificateMode.HasValue)
+            //    {
+            //        httpsOptions.ClientCertificateMode = endpoint.ClientCertificateMode.Value;
+            //    }
+            //    else
+            //    {
+            //        // Ensure endpoint is reloaded if it used the default mode and the ClientCertificateMode changed.
+            //        endpoint.ClientCertificateMode = ConfigurationReader.EndpointDefaults.ClientCertificateMode;
+            //    }
 
-                // A cert specified directly on the endpoint overrides any defaults.
-                var (serverCert, fullChain) = CertificateConfigLoader.LoadCertificate(endpoint.Certificate, endpoint.Name);
-                httpsOptions.ServerCertificate = serverCert ?? httpsOptions.ServerCertificate;
-                httpsOptions.ServerCertificateChain = fullChain ?? httpsOptions.ServerCertificateChain;
+            //    // A cert specified directly on the endpoint overrides any defaults.
+            //    var (serverCert, fullChain) = CertificateConfigLoader.LoadCertificate(endpoint.Certificate, endpoint.Name);
+            //    httpsOptions.ServerCertificate = serverCert ?? httpsOptions.ServerCertificate;
+            //    httpsOptions.ServerCertificateChain = fullChain ?? httpsOptions.ServerCertificateChain;
 
-                if (httpsOptions.ServerCertificate == null && httpsOptions.ServerCertificateSelector == null)
-                {
-                    // Fallback
-                    Options.ApplyDefaultCertificate(httpsOptions);
+            //    if (httpsOptions.ServerCertificate == null && httpsOptions.ServerCertificateSelector == null)
+            //    {
+            //        // Fallback
+            //        Options.ApplyDefaultCertificate(httpsOptions);
 
-                    // Ensure endpoint is reloaded if it used the default certificate and the certificate changed.
-                    endpoint.Certificate = DefaultCertificateConfig;
-                }
-            }
+            //        // Ensure endpoint is reloaded if it used the default certificate and the certificate changed.
+            //        endpoint.Certificate = DefaultCertificateConfig;
+            //    }
+            //}
 
             // Now that defaults have been loaded, we can compare to the currently bound endpoints to see if the config changed.
             // There's no reason to rerun an EndpointConfigurations callback if nothing changed.
@@ -363,31 +363,31 @@ public class KestrelConfigurationLoader
             }
 
             // EndpointDefaults or configureEndpoint may have added an https adapter.
-            if (https && !listenOptions.IsTls)
-            {
-                if (endpoint.Sni.Count == 0)
-                {
-                    if (httpsOptions.ServerCertificate == null && httpsOptions.ServerCertificateSelector == null)
-                    {
-                        throw new InvalidOperationException(CoreStrings.NoCertSpecifiedNoDevelopmentCertificateFound);
-                    }
+            //if (https && !listenOptions.IsTls)
+            //{
+            //    if (endpoint.Sni.Count == 0)
+            //    {
+            //        if (httpsOptions.ServerCertificate == null && httpsOptions.ServerCertificateSelector == null)
+            //        {
+            //            throw new InvalidOperationException(CoreStrings.NoCertSpecifiedNoDevelopmentCertificateFound);
+            //        }
 
-                    listenOptions.UseHttps(httpsOptions);
-                }
-                else
-                {
-                    var sniOptionsSelector = new SniOptionsSelector(endpoint.Name, endpoint.Sni, CertificateConfigLoader,
-                        httpsOptions, listenOptions.Protocols, HttpsLogger);
-                    var tlsCallbackOptions = new TlsHandshakeCallbackOptions()
-                    {
-                        OnConnection = SniOptionsSelector.OptionsCallback,
-                        HandshakeTimeout = httpsOptions.HandshakeTimeout,
-                        OnConnectionState = sniOptionsSelector,
-                    };
+            //        listenOptions.UseHttps(httpsOptions);
+            //    }
+            //    else
+            //    {
+            //        var sniOptionsSelector = new SniOptionsSelector(endpoint.Name, endpoint.Sni, CertificateConfigLoader,
+            //            httpsOptions, listenOptions.Protocols, HttpsLogger);
+            //        var tlsCallbackOptions = new TlsHandshakeCallbackOptions()
+            //        {
+            //            OnConnection = SniOptionsSelector.OptionsCallback,
+            //            HandshakeTimeout = httpsOptions.HandshakeTimeout,
+            //            OnConnectionState = sniOptionsSelector,
+            //        };
 
-                    listenOptions.UseHttps(tlsCallbackOptions);
-                }
-            }
+            //        listenOptions.UseHttps(tlsCallbackOptions);
+            //    }
+            //}
 
             listenOptions.EndpointConfig = endpoint;
 
@@ -405,86 +405,86 @@ public class KestrelConfigurationLoader
         return (endpointsToStop, endpointsToStart);
     }
 
-    private void LoadDefaultCert()
-    {
-        if (ConfigurationReader.Certificates.TryGetValue("Default", out var defaultCertConfig))
-        {
-            var (defaultCert, _ /* cert chain */) = CertificateConfigLoader.LoadCertificate(defaultCertConfig, "Default");
-            if (defaultCert != null)
-            {
-                DefaultCertificateConfig = defaultCertConfig;
-                DefaultCertificate = defaultCert;
-            }
-        }
-        else
-        {
-            var (certificate, certificateConfig) = FindDeveloperCertificateFile();
-            if (certificate != null)
-            {
-                Logger.LocatedDevelopmentCertificate(certificate);
-                DefaultCertificateConfig = certificateConfig;
-                DefaultCertificate = certificate;
-            }
-        }
-    }
+    //private void LoadDefaultCert()
+    //{
+    //    if (ConfigurationReader.Certificates.TryGetValue("Default", out var defaultCertConfig))
+    //    {
+    //        var (defaultCert, _ /* cert chain */) = CertificateConfigLoader.LoadCertificate(defaultCertConfig, "Default");
+    //        if (defaultCert != null)
+    //        {
+    //            DefaultCertificateConfig = defaultCertConfig;
+    //            DefaultCertificate = defaultCert;
+    //        }
+    //    }
+    //    else
+    //    {
+    //        var (certificate, certificateConfig) = FindDeveloperCertificateFile();
+    //        if (certificate != null)
+    //        {
+    //            Logger.LocatedDevelopmentCertificate(certificate);
+    //            DefaultCertificateConfig = certificateConfig;
+    //            DefaultCertificate = certificate;
+    //        }
+    //    }
+    //}
 
-    private (X509Certificate2?, CertificateConfig?) FindDeveloperCertificateFile()
-    {
-        string? certificatePath = null;
-        if (ConfigurationReader.Certificates.TryGetValue("Development", out var certificateConfig) &&
-            certificateConfig.Path == null &&
-            certificateConfig.Password != null &&
-            TryGetCertificatePath(out certificatePath) &&
-            File.Exists(certificatePath))
-        {
-            try
-            {
-                var certificate = new X509Certificate2(certificatePath, certificateConfig.Password);
+    //private (X509Certificate2?, CertificateConfig?) FindDeveloperCertificateFile()
+    //{
+    //    string? certificatePath = null;
+    //    if (ConfigurationReader.Certificates.TryGetValue("Development", out var certificateConfig) &&
+    //        certificateConfig.Path == null &&
+    //        certificateConfig.Password != null &&
+    //        TryGetCertificatePath(out certificatePath) &&
+    //        File.Exists(certificatePath))
+    //    {
+    //        try
+    //        {
+    //            var certificate = new X509Certificate2(certificatePath, certificateConfig.Password);
 
-                if (IsDevelopmentCertificate(certificate))
-                {
-                    return (certificate, certificateConfig);
-                }
-            }
-            catch (CryptographicException)
-            {
-                Logger.FailedToLoadDevelopmentCertificate(certificatePath);
-            }
-        }
-        else if (!string.IsNullOrEmpty(certificatePath))
-        {
-            Logger.FailedToLocateDevelopmentCertificateFile(certificatePath);
-        }
+    //            if (IsDevelopmentCertificate(certificate))
+    //            {
+    //                return (certificate, certificateConfig);
+    //            }
+    //        }
+    //        catch (CryptographicException)
+    //        {
+    //            Logger.FailedToLoadDevelopmentCertificate(certificatePath);
+    //        }
+    //    }
+    //    else if (!string.IsNullOrEmpty(certificatePath))
+    //    {
+    //        Logger.FailedToLocateDevelopmentCertificateFile(certificatePath);
+    //    }
 
-        return (null, null);
-    }
+    //    return (null, null);
+    //}
 
-    private static bool IsDevelopmentCertificate(X509Certificate2 certificate)
-    {
-        if (!string.Equals(certificate.Subject, "CN=localhost", StringComparison.Ordinal))
-        {
-            return false;
-        }
+    //private static bool IsDevelopmentCertificate(X509Certificate2 certificate)
+    //{
+    //    if (!string.Equals(certificate.Subject, "CN=localhost", StringComparison.Ordinal))
+    //    {
+    //        return false;
+    //    }
 
-        foreach (var ext in certificate.Extensions)
-        {
-            if (string.Equals(ext.Oid?.Value, CertificateManager.AspNetHttpsOid, StringComparison.Ordinal))
-            {
-                return true;
-            }
-        }
+    //    foreach (var ext in certificate.Extensions)
+    //    {
+    //        if (string.Equals(ext.Oid?.Value, CertificateManager.AspNetHttpsOid, StringComparison.Ordinal))
+    //        {
+    //            return true;
+    //        }
+    //    }
 
-        return false;
-    }
+    //    return false;
+    //}
 
-    private bool TryGetCertificatePath([NotNullWhen(true)] out string? path)
-    {
-        // See https://github.com/aspnet/Hosting/issues/1294
-        var appData = Environment.GetEnvironmentVariable("APPDATA");
-        var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-        var basePath = appData != null ? Path.Combine(appData, "ASP.NET", "https") : null;
-        basePath = basePath ?? (home != null ? Path.Combine(home, ".aspnet", "https") : null);
-        path = basePath != null ? Path.Combine(basePath, $"{HostEnvironment.ApplicationName}.pfx") : null;
-        return path != null;
-    }
+    //private bool TryGetCertificatePath([NotNullWhen(true)] out string? path)
+    //{
+    //    // See https://github.com/aspnet/Hosting/issues/1294
+    //    var appData = Environment.GetEnvironmentVariable("APPDATA");
+    //    var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+    //    var basePath = appData != null ? Path.Combine(appData, "ASP.NET", "https") : null;
+    //    basePath = basePath ?? (home != null ? Path.Combine(home, ".aspnet", "https") : null);
+    //    path = basePath != null ? Path.Combine(basePath, $"{HostEnvironment.ApplicationName}.pfx") : null;
+    //    return path != null;
+    //}
 }

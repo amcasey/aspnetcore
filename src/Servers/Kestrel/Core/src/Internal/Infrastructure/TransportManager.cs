@@ -6,11 +6,11 @@
 using System.IO.Pipelines;
 using System.Linq;
 using System.Net;
-using System.Net.Security;
+//using System.Net.Security;
 using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Http.Features;
-using Microsoft.AspNetCore.Server.Kestrel.Https;
-using Microsoft.AspNetCore.Server.Kestrel.Https.Internal;
+//using Microsoft.AspNetCore.Server.Kestrel.Https;
+//using Microsoft.AspNetCore.Server.Kestrel.Https.Internal;
 
 namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure;
 
@@ -73,36 +73,36 @@ internal sealed class TransportManager
 
         var features = new FeatureCollection();
 
-        // HttpsOptions or HttpsCallbackOptions should always be set in production, but it's not set for InMemory tests.
-        // The QUIC transport will check if TlsConnectionCallbackOptions is missing.
-        if (listenOptions.HttpsOptions != null)
-        {
-            var sslServerAuthenticationOptions = HttpsConnectionMiddleware.CreateHttp3Options(listenOptions.HttpsOptions);
-            features.Set(new TlsConnectionCallbackOptions
-            {
-                ApplicationProtocols = sslServerAuthenticationOptions.ApplicationProtocols ?? new List<SslApplicationProtocol> { SslApplicationProtocol.Http3 },
-                OnConnection = (context, cancellationToken) => ValueTask.FromResult(sslServerAuthenticationOptions),
-                OnConnectionState = null,
-            });
-        }
-        else if (listenOptions.HttpsCallbackOptions != null)
-        {
-            features.Set(new TlsConnectionCallbackOptions
-            {
-                ApplicationProtocols = new List<SslApplicationProtocol> { SslApplicationProtocol.Http3 },
-                OnConnection = (context, cancellationToken) =>
-                {
-                    return listenOptions.HttpsCallbackOptions.OnConnection(new TlsHandshakeCallbackContext
-                    {
-                        ClientHelloInfo = context.ClientHelloInfo,
-                        CancellationToken = cancellationToken,
-                        State = context.State,
-                        Connection = new ConnectionContextAdapter(context.Connection),
-                    });
-                },
-                OnConnectionState = listenOptions.HttpsCallbackOptions.OnConnectionState,
-            });
-        }
+        //// HttpsOptions or HttpsCallbackOptions should always be set in production, but it's not set for InMemory tests.
+        //// The QUIC transport will check if TlsConnectionCallbackOptions is missing.
+        //if (listenOptions.HttpsOptions != null)
+        //{
+        //    var sslServerAuthenticationOptions = HttpsConnectionMiddleware.CreateHttp3Options(listenOptions.HttpsOptions);
+        //    features.Set(new TlsConnectionCallbackOptions
+        //    {
+        //        ApplicationProtocols = sslServerAuthenticationOptions.ApplicationProtocols ?? new List<SslApplicationProtocol> { SslApplicationProtocol.Http3 },
+        //        OnConnection = (context, cancellationToken) => ValueTask.FromResult(sslServerAuthenticationOptions),
+        //        OnConnectionState = null,
+        //    });
+        //}
+        //else if (listenOptions.HttpsCallbackOptions != null)
+        //{
+        //    features.Set(new TlsConnectionCallbackOptions
+        //    {
+        //        ApplicationProtocols = new List<SslApplicationProtocol> { SslApplicationProtocol.Http3 },
+        //        OnConnection = (context, cancellationToken) =>
+        //        {
+        //            return listenOptions.HttpsCallbackOptions.OnConnection(new TlsHandshakeCallbackContext
+        //            {
+        //                ClientHelloInfo = context.ClientHelloInfo,
+        //                CancellationToken = cancellationToken,
+        //                State = context.State,
+        //                Connection = new ConnectionContextAdapter(context.Connection),
+        //            });
+        //        },
+        //        OnConnectionState = listenOptions.HttpsCallbackOptions.OnConnectionState,
+        //    });
+        //}
 
         foreach (var multiplexedTransportFactory in _multiplexedTransportFactories)
         {

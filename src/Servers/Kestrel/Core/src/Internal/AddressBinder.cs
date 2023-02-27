@@ -6,7 +6,7 @@ using System.Linq;
 using System.Net;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Connections;
-using Microsoft.AspNetCore.Hosting;
+//using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure;
@@ -230,7 +230,7 @@ internal sealed class AddressBinder
 
                 if (https && !options.IsTls)
                 {
-                    options.UseHttps();
+                    //options.UseHttps();
                 }
 
                 await options.BindAsync(context, cancellationToken).ConfigureAwait(false);
