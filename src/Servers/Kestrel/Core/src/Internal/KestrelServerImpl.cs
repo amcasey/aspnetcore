@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.IO.Pipelines;
 using System.Linq;
 using Microsoft.AspNetCore.Connections;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.AspNetCore.Http.Features;
@@ -316,8 +317,16 @@ internal sealed class KestrelServerImpl : IServer
 
             Options.ConfigurationLoader?.Load();
 
-            await AddressBinder.BindAsync(Options.ListenOptions, AddressBindContext!, cancellationToken).ConfigureAwait(false);
+            await AddressBinder.BindAsync(Options.ListenOptions, AddressBindContext!, UseHttps, cancellationToken).ConfigureAwait(false);
             _configChangedRegistration = reloadToken?.RegisterChangeCallback(TriggerRebind, this);
+
+            static void UseHttps(ListenOptions listenOptions)
+            {
+                if (!listenOptions.IsTls)
+                {
+                    listenOptions.UseHttps();
+                }
+            }
         }
         finally
         {
