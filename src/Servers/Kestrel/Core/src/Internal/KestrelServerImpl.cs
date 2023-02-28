@@ -212,25 +212,25 @@ internal sealed class KestrelServerImpl : IServer
                     options.EndPoint = await _transportManager.BindAsync(configuredEndpoint, connectionDelegate, options.EndpointConfig, onBindCancellationToken).ConfigureAwait(false);
                 }
 
-                if (hasHttp3 && _multiplexedTransportFactories.Count > 0)
-                {
-                    // Check if a previous transport has changed the endpoint. If it has then the endpoint is dynamic and we can't guarantee it will work for other transports.
-                    // For more details, see https://github.com/dotnet/aspnetcore/issues/42982
-                    if (!configuredEndpoint.Equals(options.EndPoint))
-                    {
-                        Trace.LogError(CoreStrings.DynamicPortOnMultipleTransportsNotSupported);
-                    }
-                    else
-                    {
-                        options.UseHttp3Server(ServiceContext, application, options.Protocols, addAltSvcHeader);
-                        var multiplexedConnectionDelegate = ((IMultiplexedConnectionBuilder)options).Build();
+                //if (hasHttp3 && _multiplexedTransportFactories.Count > 0)
+                //{
+                //    // Check if a previous transport has changed the endpoint. If it has then the endpoint is dynamic and we can't guarantee it will work for other transports.
+                //    // For more details, see https://github.com/dotnet/aspnetcore/issues/42982
+                //    if (!configuredEndpoint.Equals(options.EndPoint))
+                //    {
+                //        Trace.LogError(CoreStrings.DynamicPortOnMultipleTransportsNotSupported);
+                //    }
+                //    else
+                //    {
+                //        options.UseHttp3Server(ServiceContext, application, options.Protocols, addAltSvcHeader);
+                //        var multiplexedConnectionDelegate = ((IMultiplexedConnectionBuilder)options).Build();
 
-                        // Add the connection limit middleware
-                        multiplexedConnectionDelegate = EnforceConnectionLimit(multiplexedConnectionDelegate, Options.Limits.MaxConcurrentConnections, Trace);
+                //        // Add the connection limit middleware
+                //        multiplexedConnectionDelegate = EnforceConnectionLimit(multiplexedConnectionDelegate, Options.Limits.MaxConcurrentConnections, Trace);
 
-                        options.EndPoint = await _transportManager.BindAsync(configuredEndpoint, multiplexedConnectionDelegate, options, onBindCancellationToken).ConfigureAwait(false);
-                    }
-                }
+                //        options.EndPoint = await _transportManager.BindAsync(configuredEndpoint, multiplexedConnectionDelegate, options, onBindCancellationToken).ConfigureAwait(false); //TODO (acasey)
+                //    }
+                //}
             }
 
             AddressBindContext = new AddressBindContext(_serverAddresses, Options, Trace, OnBind);
