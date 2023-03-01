@@ -237,7 +237,7 @@ public static class WebHost
     {
         builder.UseKestrelCore().ConfigureKestrel((builderContext, options) =>
         {
-            options.Configure(builderContext.Configuration.GetSection("Kestrel"), reloadOnChange: true);
+            options.ConfigureSlim(builderContext.Configuration.GetSection("Kestrel"), reloadOnChange: true);
         })
         .ConfigureServices((hostingContext, services) =>
         {

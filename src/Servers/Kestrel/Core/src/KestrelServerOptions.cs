@@ -380,10 +380,26 @@ public class KestrelServerOptions
         }
 
         var hostEnvironment = ApplicationServices.GetRequiredService<IHostEnvironment>();
-        var logger = ApplicationServices.GetRequiredService<ILogger<KestrelServer>>();
+        var serverLogger = ApplicationServices.GetRequiredService<ILogger<KestrelServer>>();
         var httpsLogger = ApplicationServices.GetRequiredService<ILogger<HttpsConnectionMiddleware>>();
 
-        var loader = new KestrelConfigurationLoader(this, config, hostEnvironment, reloadOnChange, logger, httpsLogger);
+        var loader = KestrelConfigurationLoader.CreateLoader(this, config, hostEnvironment, reloadOnChange, serverLogger, httpsLogger);
+        ConfigurationLoader = loader;
+        return loader;
+    }
+
+    /// <summary>
+    /// TODO (acasey)
+    /// </summary>
+    /// <param name="config">The configuration section for Kestrel.</param>
+    /// <param name="reloadOnChange">
+    /// If <see langword="true"/>, Kestrel will dynamically update endpoint bindings when configuration changes.
+    /// This will only reload endpoints defined in the "Endpoints" section of your <paramref name="config"/>. Endpoints defined in code will not be reloaded.
+    /// </param>
+    /// <returns>A <see cref="KestrelConfigurationLoader"/> for further endpoint configuration.</returns>
+    public KestrelConfigurationLoader ConfigureSlim(IConfiguration config, bool reloadOnChange)
+    {
+        var loader = KestrelConfigurationLoader.CreateLoaderSlim(this, config, reloadOnChange);
         ConfigurationLoader = loader;
         return loader;
     }

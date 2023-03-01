@@ -22,7 +22,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel;
 /// <summary>
 /// Configuration loader for Kestrel.
 /// </summary>
-public class KestrelConfigurationLoader
+public sealed class KestrelConfigurationLoader
 {
     private readonly TlsHelper? _tlsHelper;
     private bool _loaded;
@@ -32,35 +32,54 @@ public class KestrelConfigurationLoader
         IConfiguration configuration,
         IHostEnvironment hostEnvironment,
         bool reloadOnChange,
-        ILogger<KestrelServer> logger,
+        ILogger<KestrelServer> serverLogger,
         ILogger<HttpsConnectionMiddleware> httpsLogger)
     {
+        var configurationReader = new ConfigurationReader(configuration);
+        var certificateConfigurationLoader = new CertificateConfigLoader(hostEnvironment, serverLogger);
+        var tlsHelper = new TlsHelper(
+            configurationReader,
+            certificateConfigurationLoader,
+            hostEnvironment.ApplicationName,
+            serverLogger,
+            httpsLogger);
+
         return new KestrelConfigurationLoader(
             options,
             configuration,
-            hostEnvironment,
+            configurationReader,
             reloadOnChange,
-            logger,
-            httpsLogger);
+            tlsHelper);
+    }
+
+    internal static KestrelConfigurationLoader CreateLoaderSlim(
+        KestrelServerOptions options,
+        IConfiguration configuration,
+        bool reloadOnChange)
+    {
+        var configurationReader = new ConfigurationReader(configuration);
+
+        return new KestrelConfigurationLoader(
+            options,
+            configuration,
+            configurationReader,
+            reloadOnChange,
+            tlsHelper: null);
     }
 
     private KestrelConfigurationLoader(
         KestrelServerOptions options,
         IConfiguration configuration,
-        IHostEnvironment hostEnvironment,
+        ConfigurationReader configurationReader,
         bool reloadOnChange,
-        ILogger<KestrelServer> logger,
-        ILogger<HttpsConnectionMiddleware> httpsLogger)
+        TlsHelper? tlsHelper)
     {
-        Options = options ?? throw new ArgumentNullException(nameof(options));
-        Configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
-        HostEnvironment = hostEnvironment ?? throw new ArgumentNullException(nameof(hostEnvironment));
-        Logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        HttpsLogger = httpsLogger ?? throw new ArgumentNullException(nameof(logger));
-
+        Options = options;
+        Configuration = configuration;
+        ConfigurationReader = configurationReader;
         ReloadOnChange = reloadOnChange;
 
-        ConfigurationReader = new ConfigurationReader(configuration);
+        _tlsHelper = tlsHelper;
     }
 
     /// <summary>
@@ -78,10 +97,6 @@ public class KestrelConfigurationLoader
     /// This will only reload endpoints defined in the "Endpoints" section of your Kestrel configuration. Endpoints defined in code will not be reloaded.
     /// </summary>
     internal bool ReloadOnChange { get; }
-
-    private IHostEnvironment HostEnvironment { get; }
-    private ILogger<KestrelServer> Logger { get; }
-    private ILogger<HttpsConnectionMiddleware> HttpsLogger { get; }
 
     private ConfigurationReader ConfigurationReader { get; set; }
 
@@ -293,7 +308,7 @@ public class KestrelConfigurationLoader
 
         ConfigurationReader = new ConfigurationReader(Configuration);
 
-        if (_tlsHelper?.LoadDefaultCertificate(HostEnvironment.ApplicationName, Logger) is CertificatePair certPair)
+        if (_tlsHelper?.LoadDefaultCertificate() is CertificatePair certPair)
         {
             DefaultCertificate = certPair.Certificate;
             DefaultCertificateConfig = certPair.CertificateConfig;
@@ -349,7 +364,7 @@ public class KestrelConfigurationLoader
             // EndpointDefaults or configureEndpoint may have added an https adapter.
             if (https)
             {
-                _tlsHelper?.UseHttps(listenOptions, endpoint, httpsOptions, HttpsLogger);
+                _tlsHelper?.UseHttps(listenOptions, endpoint, httpsOptions);
             }
 
             listenOptions.EndpointConfig = endpoint;
@@ -375,13 +390,22 @@ public class KestrelConfigurationLoader
     {
         private readonly ConfigurationReader _configurationReader;
         private readonly ICertificateConfigLoader _certificateConfigLoader;
+        private readonly string _applicationName;
+        private readonly ILogger<KestrelServer> _serverLogger;
+        private readonly ILogger<HttpsConnectionMiddleware> _httpsLogger;
 
         public TlsHelper(
             ConfigurationReader configurationReader,
-            ICertificateConfigLoader certificateConfigLoader)
+            ICertificateConfigLoader certificateConfigLoader,
+            string applicationName,
+            ILogger<KestrelServer> serverLogger,
+            ILogger<HttpsConnectionMiddleware> httpsLogger)
         {
             _configurationReader = configurationReader;
             _certificateConfigLoader = certificateConfigLoader;
+            _applicationName = applicationName;
+            _serverLogger = serverLogger;
+            _httpsLogger = httpsLogger;
         }
 
         public void ApplyHttpsDefaults(
@@ -430,8 +454,7 @@ public class KestrelConfigurationLoader
         public void UseHttps(
             ListenOptions listenOptions,
             EndpointConfig endpoint,
-            HttpsConnectionAdapterOptions httpsOptions,
-            ILogger<HttpsConnectionMiddleware> logger)
+            HttpsConnectionAdapterOptions httpsOptions)
         {
             if (listenOptions.IsTls)
             {
@@ -450,7 +473,7 @@ public class KestrelConfigurationLoader
             else
             {
                 var sniOptionsSelector = new SniOptionsSelector(endpoint.Name, endpoint.Sni, _certificateConfigLoader,
-                    httpsOptions, listenOptions.Protocols, logger);
+                    httpsOptions, listenOptions.Protocols, _httpsLogger);
                 var tlsCallbackOptions = new TlsHandshakeCallbackOptions()
                 {
                     OnConnection = SniOptionsSelector.OptionsCallback,
@@ -462,7 +485,7 @@ public class KestrelConfigurationLoader
             }
         }
 
-        public CertificatePair? LoadDefaultCertificate(string applicationName, ILogger<KestrelServer> logger)
+        public CertificatePair? LoadDefaultCertificate()
         {
             if (_configurationReader.Certificates.TryGetValue("Default", out var defaultCertConfig))
             {
@@ -472,22 +495,22 @@ public class KestrelConfigurationLoader
                     return new CertificatePair(defaultCert, defaultCertConfig);
                 }
             }
-            else if (FindDeveloperCertificateFile(applicationName, logger) is CertificatePair pair)
+            else if (FindDeveloperCertificateFile() is CertificatePair pair)
             {
-                logger.LocatedDevelopmentCertificate(pair.Certificate);
+                _serverLogger.LocatedDevelopmentCertificate(pair.Certificate);
                 return pair;
             }
 
             return null;
         }
 
-        private CertificatePair? FindDeveloperCertificateFile(string applicationName, ILogger<KestrelServer> logger)
+        private CertificatePair? FindDeveloperCertificateFile()
         {
             string? certificatePath = null;
             if (_configurationReader.Certificates.TryGetValue("Development", out var certificateConfig) &&
                 certificateConfig.Path == null &&
                 certificateConfig.Password != null &&
-                TryGetCertificatePath(applicationName, out certificatePath) &&
+                TryGetCertificatePath(_applicationName, out certificatePath) &&
                 File.Exists(certificatePath))
             {
                 try
@@ -501,12 +524,12 @@ public class KestrelConfigurationLoader
                 }
                 catch (CryptographicException)
                 {
-                    logger.FailedToLoadDevelopmentCertificate(certificatePath);
+                    _serverLogger.FailedToLoadDevelopmentCertificate(certificatePath);
                 }
             }
             else if (!string.IsNullOrEmpty(certificatePath))
             {
-                logger.FailedToLocateDevelopmentCertificateFile(certificatePath);
+                _serverLogger.FailedToLocateDevelopmentCertificateFile(certificatePath);
             }
 
             return null;
