@@ -28,7 +28,7 @@ public static class WebHostBuilderKestrelExtensions
     /// <returns>
     /// The Microsoft.AspNetCore.Hosting.IWebHostBuilder.
     /// </returns>
-    public static IWebHostBuilder UseKestrelCore(this IWebHostBuilder hostBuilder)
+    public static IWebHostBuilder UseKestrelSlim(this IWebHostBuilder hostBuilder)
     {
         return UseKestrelWorker(hostBuilder, useQuic: null);
     }

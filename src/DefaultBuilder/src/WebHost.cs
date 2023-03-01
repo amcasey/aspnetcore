@@ -235,7 +235,7 @@ public static class WebHost
 
     internal static void ConfigureWebDefaultsCore(IWebHostBuilder builder, Action<IServiceCollection>? configureRouting = null)
     {
-        builder.UseKestrelCore().ConfigureKestrel((builderContext, options) =>
+        builder.UseKestrelSlim().ConfigureKestrel((builderContext, options) =>
         {
             options.ConfigureSlim(builderContext.Configuration.GetSection("Kestrel"), reloadOnChange: true);
         })
