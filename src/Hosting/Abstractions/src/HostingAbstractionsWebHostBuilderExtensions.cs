@@ -73,7 +73,7 @@ public static class HostingAbstractionsWebHostBuilderExtensions
         {
             // It would be nicer if this was transient but we need to pass in the
             // factory instance directly
-            services.AddSingleton(server);
+            services.AddSingleton(server); // TODO (acasey)
         });
     }
 

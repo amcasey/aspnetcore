@@ -66,7 +66,7 @@ public static class WebHostBuilderKestrelExtensions
             services.TryAddSingleton<IConnectionListenerFactory, SocketTransportFactory>();
 
             services.AddTransient<IConfigureOptions<KestrelServerOptions>, KestrelServerOptionsSetup>();
-            services.AddSingleton<IServer, KestrelServerImpl>();
+            services.AddSingleton<IServer, KestrelServerImpl>(); // TODO (acasey)
         });
 
         useQuic?.Invoke(hostBuilder);
