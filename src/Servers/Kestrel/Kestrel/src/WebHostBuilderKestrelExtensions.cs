@@ -31,7 +31,7 @@ public static class WebHostBuilderKestrelExtensions
     /// </returns>
     public static IWebHostBuilder UseKestrelSlim(this IWebHostBuilder hostBuilder)
     {
-        return UseKestrelWorker<KestrelServerImpl>(hostBuilder, useQuic: null);
+        return UseKestrelWorker<KestrelServerSlim>(hostBuilder, useQuic: null);
     }
 
     /// <summary>
