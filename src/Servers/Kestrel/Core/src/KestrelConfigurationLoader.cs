@@ -20,7 +20,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel;
 /// </summary>
 public sealed partial class KestrelConfigurationLoader
 {
-    private readonly TlsHelper? _tlsHelper;
+    private readonly TlsHelper? _tlsHelper; // TODO (acasey): set this after construction and call reload to enable https?
     private bool _loaded;
 
     internal static KestrelConfigurationLoader CreateLoader(
@@ -31,21 +31,25 @@ public sealed partial class KestrelConfigurationLoader
         ILogger<KestrelServer> serverLogger,
         ILogger<HttpsConnectionMiddleware> httpsLogger)
     {
+        KestrelConfigurationLoader loader = null!;
+
         var configurationReader = new ConfigurationReader(configuration);
         var certificateConfigurationLoader = new CertificateConfigLoader(hostEnvironment, serverLogger);
         var tlsHelper = new TlsHelper(
-            configurationReader,
+            () => loader.ConfigurationReader,
             certificateConfigurationLoader,
             hostEnvironment.ApplicationName,
             serverLogger,
             httpsLogger);
 
-        return new KestrelConfigurationLoader(
+        loader = new KestrelConfigurationLoader(
             options,
             configuration,
             configurationReader,
             reloadOnChange,
             tlsHelper);
+
+        return loader;
     }
 
     internal static KestrelConfigurationLoader CreateLoaderSlim(

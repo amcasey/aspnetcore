@@ -22,25 +22,27 @@ public sealed partial class KestrelConfigurationLoader
 {
     private sealed class TlsHelper
     {
-        private readonly ConfigurationReader _configurationReader;
+        private readonly Func<ConfigurationReader> _getConfigurationReader;
         private readonly ICertificateConfigLoader _certificateConfigLoader;
         private readonly string _applicationName;
         private readonly ILogger<KestrelServer> _serverLogger;
         private readonly ILogger<HttpsConnectionMiddleware> _httpsLogger;
 
         public TlsHelper(
-            ConfigurationReader configurationReader,
+            Func<ConfigurationReader> getConfigurationReader,
             ICertificateConfigLoader certificateConfigLoader,
             string applicationName,
             ILogger<KestrelServer> serverLogger,
             ILogger<HttpsConnectionMiddleware> httpsLogger)
         {
-            _configurationReader = configurationReader;
+            _getConfigurationReader = getConfigurationReader;
             _certificateConfigLoader = certificateConfigLoader;
             _applicationName = applicationName;
             _serverLogger = serverLogger;
             _httpsLogger = httpsLogger;
         }
+
+        private ConfigurationReader ConfigurationReader => _getConfigurationReader();
 
         public void ApplyHttpsDefaults(
             KestrelServerOptions serverOptions,
@@ -57,7 +59,7 @@ public sealed partial class KestrelConfigurationLoader
             else
             {
                 // Ensure endpoint is reloaded if it used the default protocol and the SslProtocols changed.
-                endpoint.SslProtocols = _configurationReader.EndpointDefaults.SslProtocols;
+                endpoint.SslProtocols = ConfigurationReader.EndpointDefaults.SslProtocols;
             }
 
             if (endpoint.ClientCertificateMode.HasValue)
@@ -67,7 +69,7 @@ public sealed partial class KestrelConfigurationLoader
             else
             {
                 // Ensure endpoint is reloaded if it used the default mode and the ClientCertificateMode changed.
-                endpoint.ClientCertificateMode = _configurationReader.EndpointDefaults.ClientCertificateMode;
+                endpoint.ClientCertificateMode = ConfigurationReader.EndpointDefaults.ClientCertificateMode;
             }
 
             // A cert specified directly on the endpoint overrides any defaults.
@@ -121,7 +123,7 @@ public sealed partial class KestrelConfigurationLoader
 
         public CertificatePair? LoadDefaultCertificate()
         {
-            if (_configurationReader.Certificates.TryGetValue("Default", out var defaultCertConfig))
+            if (ConfigurationReader.Certificates.TryGetValue("Default", out var defaultCertConfig))
             {
                 var (defaultCert, _ /* cert chain */) = _certificateConfigLoader.LoadCertificate(defaultCertConfig, "Default");
                 if (defaultCert != null)
@@ -141,7 +143,7 @@ public sealed partial class KestrelConfigurationLoader
         private CertificatePair? FindDeveloperCertificateFile()
         {
             string? certificatePath = null;
-            if (_configurationReader.Certificates.TryGetValue("Development", out var certificateConfig) &&
+            if (ConfigurationReader.Certificates.TryGetValue("Development", out var certificateConfig) &&
                 certificateConfig.Path == null &&
                 certificateConfig.Password != null &&
                 TryGetCertificatePath(_applicationName, out certificatePath) &&
