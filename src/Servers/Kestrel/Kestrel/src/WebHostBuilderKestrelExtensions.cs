@@ -31,6 +31,7 @@ public static class WebHostBuilderKestrelExtensions
     /// </returns>
     public static IWebHostBuilder UseKestrelSlim(this IWebHostBuilder hostBuilder)
     {
+        // Since we are not calling hostBuilder.UseQuic, the IMultiplexedConnectionListenerFactory will never be registered with DI
         return UseKestrelWorker<KestrelServerSlim>(hostBuilder, useQuic: null);
     }
 
@@ -70,6 +71,8 @@ public static class WebHostBuilderKestrelExtensions
             services.TryAddSingleton<IConnectionListenerFactory, SocketTransportFactory>();
 
             services.AddTransient<IConfigureOptions<KestrelServerOptions>, KestrelServerOptionsSetup>();
+
+            // TODO (acasey): subsequently use services.RemoveAll or .Replace to change from Slim to Impl?
             services.AddSingleton<IServer, TServer>();
         });
 

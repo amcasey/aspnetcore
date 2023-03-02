@@ -68,6 +68,7 @@ internal sealed class TransportManager
     {
         if (_multiplexedTransportFactories.Count == 0)
         {
+            // TODO (acasey): update to mention UseKestrelSlim
             throw new InvalidOperationException($"Cannot bind with {nameof(MultiplexedConnectionDelegate)} no {nameof(IMultiplexedConnectionListenerFactory)} is registered.");
         }
 
