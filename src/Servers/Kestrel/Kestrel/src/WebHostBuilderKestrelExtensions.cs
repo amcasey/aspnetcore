@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Diagnostics.CodeAnalysis;
 using System.Net.Http;
 using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Hosting.Server;
@@ -30,7 +31,7 @@ public static class WebHostBuilderKestrelExtensions
     /// </returns>
     public static IWebHostBuilder UseKestrelSlim(this IWebHostBuilder hostBuilder)
     {
-        return UseKestrelWorker<KestrelServerSlim>(hostBuilder, useQuic: null);
+        return UseKestrelWorker<KestrelServerImpl>(hostBuilder, useQuic: null);
     }
 
     /// <summary>
@@ -58,7 +59,10 @@ public static class WebHostBuilderKestrelExtensions
         }
     }
 
-    private static IWebHostBuilder UseKestrelWorker<TServer>(this IWebHostBuilder hostBuilder, Action<IWebHostBuilder>? useQuic) where TServer : class, IServer
+    private static IWebHostBuilder UseKestrelWorker<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TServer>(
+        this IWebHostBuilder hostBuilder,
+        Action<IWebHostBuilder>? useQuic)
+        where TServer : class, IServer
     {
         hostBuilder.ConfigureServices(services =>
         {
