@@ -30,7 +30,7 @@ public static class WebHostBuilderKestrelExtensions
     /// </returns>
     public static IWebHostBuilder UseKestrelSlim(this IWebHostBuilder hostBuilder)
     {
-        return UseKestrelWorker(hostBuilder, useQuic: null);
+        return UseKestrelWorker<KestrelServerSlim>(hostBuilder, useQuic: null);
     }
 
     /// <summary>
@@ -44,7 +44,7 @@ public static class WebHostBuilderKestrelExtensions
     /// </returns>
     public static IWebHostBuilder UseKestrel(this IWebHostBuilder hostBuilder)
     {
-        return UseKestrelWorker(hostBuilder, UseQuic);
+        return UseKestrelWorker<KestrelServerImpl>(hostBuilder, UseQuic);
 
         static void UseQuic(IWebHostBuilder hostBuilder)
         {
@@ -58,7 +58,7 @@ public static class WebHostBuilderKestrelExtensions
         }
     }
 
-    private static IWebHostBuilder UseKestrelWorker(this IWebHostBuilder hostBuilder, Action<IWebHostBuilder>? useQuic)
+    private static IWebHostBuilder UseKestrelWorker<TServer>(this IWebHostBuilder hostBuilder, Action<IWebHostBuilder>? useQuic) where TServer : class, IServer
     {
         hostBuilder.ConfigureServices(services =>
         {
@@ -66,7 +66,7 @@ public static class WebHostBuilderKestrelExtensions
             services.TryAddSingleton<IConnectionListenerFactory, SocketTransportFactory>();
 
             services.AddTransient<IConfigureOptions<KestrelServerOptions>, KestrelServerOptionsSetup>();
-            services.AddSingleton<IServer, KestrelServerImpl>(); // TODO (acasey)
+            services.AddSingleton<IServer, TServer>();
         });
 
         useQuic?.Invoke(hostBuilder);

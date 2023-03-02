@@ -389,7 +389,7 @@ public class KestrelServerOptions
     }
 
     /// <summary>
-    /// TODO (acasey)
+    /// TODO (acasey): doc
     /// </summary>
     /// <param name="config">The configuration section for Kestrel.</param>
     /// <param name="reloadOnChange">
