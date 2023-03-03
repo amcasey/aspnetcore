@@ -343,6 +343,7 @@ public sealed partial class KestrelConfigurationLoader
             if (https)
             {
                 _tlsHelper?.ApplyHttpsDefaults(Options, endpoint, httpsOptions, DefaultCertificateConfig);
+                // TODO (acasey): no-op is fine because a cert might have been set a different way?
             }
 
             // Now that defaults have been loaded, we can compare to the currently bound endpoints to see if the config changed.
@@ -366,6 +367,7 @@ public sealed partial class KestrelConfigurationLoader
             if (https)
             {
                 _tlsHelper?.UseHttps(listenOptions, endpoint, httpsOptions);
+                // TODO (acasey): throw if there's no cert; mention slim
             }
 
             listenOptions.EndpointConfig = endpoint;

@@ -64,6 +64,7 @@ internal sealed class KestrelServerSlim : KestrelServerBase
 
     protected override void UseHttps(ListenOptions _)
     {
-        // TODO (acasey): exception?
+        // TODO (acasey): exception if no cert
+        // TODO (acasey): need to be able to enable this when https is available but QUIC is not
     }
 }
