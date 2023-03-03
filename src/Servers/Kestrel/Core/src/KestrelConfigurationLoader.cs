@@ -260,6 +260,7 @@ public sealed partial class KestrelConfigurationLoader
 
     // Called from KestrelServerOptions.ApplyHttpsDefaults so it applies to even explicit Listen endpoints.
     // Does not require a call to Load.
+    // TODO (acasey): disable for logical consistency?
     internal void ApplyHttpsDefaults(HttpsConnectionAdapterOptions httpsOptions)
     {
         var defaults = ConfigurationReader.EndpointDefaults;

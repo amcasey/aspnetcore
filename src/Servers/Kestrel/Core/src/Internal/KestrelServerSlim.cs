@@ -64,5 +64,6 @@ internal sealed class KestrelServerSlim : KestrelServerBase
 
     protected override void UseHttps(ListenOptions _)
     {
+        // TODO (acasey): exception?
     }
 }
