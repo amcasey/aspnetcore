@@ -77,7 +77,7 @@ public sealed partial class KestrelConfigurationLoader
             httpsOptions.ServerCertificate = serverCert ?? httpsOptions.ServerCertificate;
             httpsOptions.ServerCertificateChain = fullChain ?? httpsOptions.ServerCertificateChain;
 
-            if (httpsOptions.ServerCertificate == null && httpsOptions.ServerCertificateSelector == null)
+            if (!httpsOptions.HasServerCertificateOrSelector)
             {
                 // Fallback
                 serverOptions.ApplyDefaultCertificate(httpsOptions);
@@ -99,7 +99,7 @@ public sealed partial class KestrelConfigurationLoader
 
             if (endpoint.Sni.Count == 0)
             {
-                if (httpsOptions.ServerCertificate == null && httpsOptions.ServerCertificateSelector == null)
+                if (!httpsOptions.HasServerCertificateOrSelector)
                 {
                     throw new InvalidOperationException(CoreStrings.NoCertSpecifiedNoDevelopmentCertificateFound);
                 }

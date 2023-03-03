@@ -16,7 +16,7 @@ internal sealed class KestrelServerSlim : KestrelServerBase
         IOptions<KestrelServerOptions> options,
         IEnumerable<IConnectionListenerFactory> transportFactories,
         ILoggerFactory loggerFactory)
-        : base(transportFactories, Array.Empty<IMultiplexedConnectionListenerFactory>(), CreateServiceContext(options, loggerFactory, null))
+        : base(transportFactories, Array.Empty<IMultiplexedConnectionListenerFactory>(), CreateServiceContext(options, loggerFactory, diagnosticSource: null, isDefaultCertificateEnabled: false))
     {
     }
 
@@ -25,19 +25,22 @@ internal sealed class KestrelServerSlim : KestrelServerBase
         var hasHttp1 = options.Protocols.HasFlag(HttpProtocols.Http1);
         var hasHttp2 = options.Protocols.HasFlag(HttpProtocols.Http2);
         var hasHttp3 = options.Protocols.HasFlag(HttpProtocols.Http3); // TODO (acasey): warn
-        var hasTls = options.IsTls; // TODO (acasey): warn
+        var hasTls = options.IsTls; // May be true if the user has called UseHttps and explicitly configured a cert
 
         // Filter out invalid combinations.
 
-        // Http/1 without TLS, no-op HTTP/2.
-        if (hasHttp1)
+        if (!hasTls)
         {
-            if (options.ProtocolsSetExplicitly && hasHttp2)
+            // Http/1 without TLS, no-op HTTP/2.
+            if (hasHttp1)
             {
-                Trace.Http2DisabledWithHttp1AndNoTls(options.EndPoint);
-            }
+                if (options.ProtocolsSetExplicitly && hasHttp2)
+                {
+                    Trace.Http2DisabledWithHttp1AndNoTls(options.EndPoint);
+                }
 
-            hasHttp2 = false;
+                hasHttp2 = false;
+            }
         }
 
         var configuredEndpoint = options.EndPoint;
@@ -65,6 +68,7 @@ internal sealed class KestrelServerSlim : KestrelServerBase
     protected override void UseHttps(ListenOptions _)
     {
         // TODO (acasey): exception if no cert
-        // TODO (acasey): need to be able to enable this when https is available but QUIC is not
+        // TODO (acasey): need to be able to enable this when https is available but QUIC is not (sibling class?)
+        // TODO (acasey): must not reference the real UseHttps (would break trimming)
     }
 }

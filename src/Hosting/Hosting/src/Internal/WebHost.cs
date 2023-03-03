@@ -261,7 +261,7 @@ internal sealed partial class WebHost : IWebHost, IAsyncDisposable
             var addresses = serverAddressesFeature?.Addresses;
             if (addresses != null && !addresses.IsReadOnly && addresses.Count == 0)
             {
-                var urls = _config[WebHostDefaults.ServerUrlsKey] ?? _config[DeprecatedServerUrlsKey]; // TODO (acasey): warn about using env var (only if https?)?
+                var urls = _config[WebHostDefaults.ServerUrlsKey] ?? _config[DeprecatedServerUrlsKey]; // TODO (acasey): warn about using env var (only if https?)?  Probably sufficient to warn when it's parsed
                 if (!string.IsNullOrEmpty(urls))
                 {
                     serverAddressesFeature!.PreferHostingUrls = WebHostUtilities.ParseBool(_config[WebHostDefaults.PreferHostingUrlsKey]);

@@ -205,6 +205,12 @@ public class KestrelServerOptions
     }
 
     /// <summary>
+    /// If true, the <see cref="KestrelConfigurationLoader"/>, if any, and the the <see cref="CertificateManager"/>
+    /// will be checked for a default certificate.
+    /// </summary>
+    internal bool IsDefaultCertificateEnabled { get; set; }
+
+    /// <summary>
     /// Specifies a configuration Action to run for each newly created endpoint. Calling this again will replace
     /// the prior action.
     /// </summary>
@@ -231,15 +237,17 @@ public class KestrelServerOptions
 
     internal void ApplyHttpsDefaults(HttpsConnectionAdapterOptions httpsOptions)
     {
+        // If there is a configuration loader and it does not support https, it will throw.
+        // Otherwise, we should be fine using whatever the user configured.
         ConfigurationLoader?.ApplyHttpsDefaults(httpsOptions);
         HttpsDefaults(httpsOptions);
     }
 
     internal void ApplyDefaultCertificate(HttpsConnectionAdapterOptions httpsOptions)
     {
-        if (httpsOptions.ServerCertificate != null || httpsOptions.ServerCertificateSelector != null)
+        if (!IsDefaultCertificateEnabled)
         {
-            return;
+            throw new InvalidOperationException("Nope"); // TODO (acasey): message
         }
 
         if (TestOverrideDefaultCertificate is X509Certificate2 certificateFromTest)

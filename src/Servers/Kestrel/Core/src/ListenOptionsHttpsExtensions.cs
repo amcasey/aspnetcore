@@ -169,9 +169,12 @@ public static class ListenOptionsHttpsExtensions
         var options = new HttpsConnectionAdapterOptions();
         listenOptions.KestrelServerOptions.ApplyHttpsDefaults(options);
         configureOptions(options);
-        listenOptions.KestrelServerOptions.ApplyDefaultCertificate(options); // TODO (acasey): prevent this
+        if (!options.HasServerCertificateOrSelector)
+        {
+            listenOptions.KestrelServerOptions.ApplyDefaultCertificate(options); // TODO (acasey): prevent this
+        }
 
-        if (options.ServerCertificate == null && options.ServerCertificateSelector == null)
+        if (!options.HasServerCertificateOrSelector)
         {
             throw new InvalidOperationException(CoreStrings.NoCertSpecifiedNoDevelopmentCertificateFound);
         }
@@ -212,7 +215,7 @@ public static class ListenOptionsHttpsExtensions
     /// <param name="serverOptionsSelectionCallback">Callback to configure HTTPS options.</param>
     /// <param name="state">State for the <paramref name="serverOptionsSelectionCallback"/>.</param>
     /// <returns>The <see cref="ListenOptions"/>.</returns>
-    public static ListenOptions UseHttps(this ListenOptions listenOptions, ServerOptionsSelectionCallback serverOptionsSelectionCallback, object state) // TODO (acasey): might just work?
+    public static ListenOptions UseHttps(this ListenOptions listenOptions, ServerOptionsSelectionCallback serverOptionsSelectionCallback, object state) // TODO (acasey): should just work
     {
         return listenOptions.UseHttps(serverOptionsSelectionCallback, state, HttpsConnectionAdapterOptions.DefaultHandshakeTimeout);
     }
@@ -226,7 +229,7 @@ public static class ListenOptionsHttpsExtensions
     /// <param name="state">State for the <paramref name="serverOptionsSelectionCallback"/>.</param>
     /// <param name="handshakeTimeout">Specifies the maximum amount of time allowed for the TLS/SSL handshake. This must be positive and finite.</param>
     /// <returns>The <see cref="ListenOptions"/>.</returns>
-    public static ListenOptions UseHttps(this ListenOptions listenOptions, ServerOptionsSelectionCallback serverOptionsSelectionCallback, object state, TimeSpan handshakeTimeout) // TODO (acasey): might just work?
+    public static ListenOptions UseHttps(this ListenOptions listenOptions, ServerOptionsSelectionCallback serverOptionsSelectionCallback, object state, TimeSpan handshakeTimeout) // TODO (acasey): should just work
     {
         return listenOptions.UseHttps(new TlsHandshakeCallbackOptions()
         {
@@ -243,7 +246,7 @@ public static class ListenOptionsHttpsExtensions
     /// <param name="listenOptions">The <see cref="ListenOptions"/> to configure.</param>
     /// <param name="callbackOptions">Options for a per connection callback.</param>
     /// <returns>The <see cref="ListenOptions"/>.</returns>
-    public static ListenOptions UseHttps(this ListenOptions listenOptions, TlsHandshakeCallbackOptions callbackOptions) // TODO (acasey): might just work?
+    public static ListenOptions UseHttps(this ListenOptions listenOptions, TlsHandshakeCallbackOptions callbackOptions) // TODO (acasey): should just work
     {
         ArgumentNullException.ThrowIfNull(callbackOptions);
 

@@ -18,7 +18,7 @@ internal sealed class KestrelServerImpl : KestrelServerBase
         IOptions<KestrelServerOptions> options,
         IEnumerable<IConnectionListenerFactory> transportFactories,
         ILoggerFactory loggerFactory)
-        : this(transportFactories, Array.Empty<IMultiplexedConnectionListenerFactory>(), CreateServiceContext(options, loggerFactory, null))
+        : this(transportFactories, Array.Empty<IMultiplexedConnectionListenerFactory>(), CreateServiceContext(options, loggerFactory, diagnosticSource: null, isDefaultCertificateEnabled: true))
     {
     }
 
@@ -27,7 +27,7 @@ internal sealed class KestrelServerImpl : KestrelServerBase
         IEnumerable<IConnectionListenerFactory> transportFactories,
         IEnumerable<IMultiplexedConnectionListenerFactory> multiplexedFactories,
         ILoggerFactory loggerFactory)
-        : this(transportFactories, multiplexedFactories, CreateServiceContext(options, loggerFactory, null))
+        : this(transportFactories, multiplexedFactories, CreateServiceContext(options, loggerFactory, diagnosticSource: null, isDefaultCertificateEnabled: true))
     {
     }
 
@@ -37,7 +37,7 @@ internal sealed class KestrelServerImpl : KestrelServerBase
         IEnumerable<IMultiplexedConnectionListenerFactory> multiplexedFactories,
         ILoggerFactory loggerFactory,
         DiagnosticSource diagnosticSource)
-        : this(transportFactories, multiplexedFactories, CreateServiceContext(options, loggerFactory, diagnosticSource))
+        : this(transportFactories, multiplexedFactories, CreateServiceContext(options, loggerFactory, diagnosticSource, isDefaultCertificateEnabled: true))
     {
     }
 

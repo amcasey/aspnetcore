@@ -260,7 +260,7 @@ public sealed partial class KestrelConfigurationLoader
 
     // Called from KestrelServerOptions.ApplyHttpsDefaults so it applies to even explicit Listen endpoints.
     // Does not require a call to Load.
-    // TODO (acasey): disable for logical consistency?
+    // TODO (acasey): disable for logical consistency
     internal void ApplyHttpsDefaults(HttpsConnectionAdapterOptions httpsOptions)
     {
         var defaults = ConfigurationReader.EndpointDefaults;
@@ -342,8 +342,8 @@ public sealed partial class KestrelConfigurationLoader
 
             if (https)
             {
+                // TODO (acasey): Disable for consistency if no _tlsHelper; mention slim
                 _tlsHelper?.ApplyHttpsDefaults(Options, endpoint, httpsOptions, DefaultCertificateConfig);
-                // TODO (acasey): no-op is fine because a cert might have been set a different way?
             }
 
             // Now that defaults have been loaded, we can compare to the currently bound endpoints to see if the config changed.
@@ -366,8 +366,8 @@ public sealed partial class KestrelConfigurationLoader
             // EndpointDefaults or configureEndpoint may have added an https adapter.
             if (https)
             {
-                _tlsHelper?.UseHttps(listenOptions, endpoint, httpsOptions);
                 // TODO (acasey): throw if there's no cert; mention slim
+                _tlsHelper?.UseHttps(listenOptions, endpoint, httpsOptions);
             }
 
             listenOptions.EndpointConfig = endpoint;
