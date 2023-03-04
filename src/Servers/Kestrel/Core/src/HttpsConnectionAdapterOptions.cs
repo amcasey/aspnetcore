@@ -56,7 +56,7 @@ public class HttpsConnectionAdapterOptions
     public Func<ConnectionContext?, string?, X509Certificate2?>? ServerCertificateSelector { get; set; }
 
     /// <summary>
-    /// A convenience property for checking whether a server certificate has been set.
+    /// A convenience property for checking whether a server certificate or selector has been set.
     /// </summary>
     internal bool HasServerCertificateOrSelector => ServerCertificate is not null || ServerCertificateSelector is not null;
 

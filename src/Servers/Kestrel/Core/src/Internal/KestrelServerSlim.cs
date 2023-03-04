@@ -26,8 +26,13 @@ internal sealed class KestrelServerSlim : KestrelServerBase
     {
         var hasHttp1 = options.Protocols.HasFlag(HttpProtocols.Http1);
         var hasHttp2 = options.Protocols.HasFlag(HttpProtocols.Http2);
-        var hasHttp3 = options.Protocols.HasFlag(HttpProtocols.Http3); // TODO (acasey): warn
+        var hasHttp3 = options.Protocols.HasFlag(HttpProtocols.Http3);
         var hasTls = options.IsTls; // May be true if the user has called UseHttps and explicitly configured a cert
+
+        if (hasHttp3)
+        {
+            throw new InvalidOperationException("Nope"); // TODO (acasey): message
+        }
 
         // Filter out invalid combinations.
 
