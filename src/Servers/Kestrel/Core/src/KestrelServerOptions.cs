@@ -237,7 +237,8 @@ public class KestrelServerOptions
 
     internal void ApplyHttpsDefaults(HttpsConnectionAdapterOptions httpsOptions)
     {
-        // If there is a configuration loader and it does not support https, it will throw.
+        // If there is a configuration loader, the configuration provides defaults,
+        // and the loader does not support https, it will throw.
         // Otherwise, we should be fine using whatever the user configured.
         ConfigurationLoader?.ApplyHttpsDefaults(httpsOptions);
         HttpsDefaults(httpsOptions);

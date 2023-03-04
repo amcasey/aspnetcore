@@ -262,22 +262,29 @@ public sealed partial class KestrelConfigurationLoader
     // Does not require a call to Load.
     internal void ApplyHttpsDefaults(HttpsConnectionAdapterOptions httpsOptions)
     {
-        if (_tlsHelper is null)
-        {
-            // There's no trimming benefit to disabling this, but it would be a confusing
-            // user experience to allow this but not certificates.
-            throw new InvalidOperationException("Nope"); // TODO (acasey): message
-        }
-
         var defaults = ConfigurationReader.EndpointDefaults;
 
         if (defaults.SslProtocols.HasValue)
         {
+            if (_tlsHelper is null)
+            {
+                // There's no trimming benefit to disabling this, but it would be a confusing
+                // user experience to allow this but not certificates.
+                throw new InvalidOperationException("Nope"); // TODO (acasey): message
+            }
+
             httpsOptions.SslProtocols = defaults.SslProtocols.Value;
         }
 
         if (defaults.ClientCertificateMode.HasValue)
         {
+            if (_tlsHelper is null)
+            {
+                // There's no trimming benefit to disabling this, but it would be a confusing
+                // user experience to allow this but not certificates.
+                throw new InvalidOperationException("Nope"); // TODO (acasey): message
+            }
+
             httpsOptions.ClientCertificateMode = defaults.ClientCertificateMode.Value;
         }
     }
