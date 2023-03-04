@@ -260,9 +260,15 @@ public sealed partial class KestrelConfigurationLoader
 
     // Called from KestrelServerOptions.ApplyHttpsDefaults so it applies to even explicit Listen endpoints.
     // Does not require a call to Load.
-    // TODO (acasey): disable for logical consistency
     internal void ApplyHttpsDefaults(HttpsConnectionAdapterOptions httpsOptions)
     {
+        if (_tlsHelper is null)
+        {
+            // There's no trimming benefit to disabling this, but it would be a confusing
+            // user experience to allow this but not certificates.
+            throw new InvalidOperationException("Nope"); // TODO (acasey): message
+        }
+
         var defaults = ConfigurationReader.EndpointDefaults;
 
         if (defaults.SslProtocols.HasValue)
@@ -319,7 +325,14 @@ public sealed partial class KestrelConfigurationLoader
         {
             var listenOptions = AddressBinder.ParseAddress(endpoint.Url, out var https);
 
-            if (!https)
+            if (https)
+            {
+                if (_tlsHelper is null)
+                {
+                    throw new InvalidOperationException("Nope"); // TODO (acasey): message
+                }
+            }
+            else
             {
                 ConfigurationReader.ThrowIfContainsHttpsOnlyConfiguration(endpoint);
             }
@@ -342,8 +355,7 @@ public sealed partial class KestrelConfigurationLoader
 
             if (https)
             {
-                // TODO (acasey): Disable for consistency if no _tlsHelper; mention slim
-                _tlsHelper?.ApplyHttpsDefaults(Options, endpoint, httpsOptions, DefaultCertificateConfig);
+                _tlsHelper!.ApplyHttpsDefaults(Options, endpoint, httpsOptions, DefaultCertificateConfig);
             }
 
             // Now that defaults have been loaded, we can compare to the currently bound endpoints to see if the config changed.
@@ -366,8 +378,7 @@ public sealed partial class KestrelConfigurationLoader
             // EndpointDefaults or configureEndpoint may have added an https adapter.
             if (https)
             {
-                // TODO (acasey): throw if there's no cert; mention slim
-                _tlsHelper?.UseHttps(listenOptions, endpoint, httpsOptions);
+                _tlsHelper!.UseHttps(listenOptions, endpoint, httpsOptions);
             }
 
             listenOptions.EndpointConfig = endpoint;

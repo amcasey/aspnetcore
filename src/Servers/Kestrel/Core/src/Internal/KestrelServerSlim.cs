@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Diagnostics;
 using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Server.Kestrel.Core.Internal;
@@ -10,6 +11,7 @@ using Microsoft.Extensions.Options;
 
 namespace Microsoft.AspNetCore.Server.Kestrel.Core;
 
+// TODO (acasey): Need an intermediate type that supports https but not quic
 internal sealed class KestrelServerSlim : KestrelServerBase
 {
     public KestrelServerSlim(
@@ -65,10 +67,12 @@ internal sealed class KestrelServerSlim : KestrelServerBase
         }
     }
 
-    protected override void UseHttps(ListenOptions _)
+    protected override void UseHttps(ListenOptions options)
     {
-        // TODO (acasey): exception if no cert
-        // TODO (acasey): need to be able to enable this when https is available but QUIC is not (sibling class?)
-        // TODO (acasey): must not reference the real UseHttps (would break trimming)
+        // If IsTls is true, it's possible the user made their own, valid UseHttps call.
+        // However, if that's the case, then this method should not have been called.
+        Debug.Assert(!options.IsTls);
+
+        throw new InvalidOperationException("Nope"); // TODO (acasey): message
     }
 }

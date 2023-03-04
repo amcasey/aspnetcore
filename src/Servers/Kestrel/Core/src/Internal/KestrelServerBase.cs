@@ -44,7 +44,7 @@ internal abstract class KestrelServerBase : IServer
 
         if (!HasTransportFactories && !HasMultiplexedTransportFactories)
         {
-            // TODO (acasey): mention UseKestrelSlim?
+            // TODO (acasey): mention UseKestrelSlim unless full impl
             throw new InvalidOperationException(CoreStrings.TransportNotFound);
         }
 
