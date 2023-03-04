@@ -205,10 +205,13 @@ public class KestrelServerOptions
     }
 
     /// <summary>
-    /// If true, the <see cref="KestrelConfigurationLoader"/>, if any, and the the <see cref="CertificateManager"/>
+    /// If false, the <see cref="KestrelConfigurationLoader"/>, if any, and the the <see cref="CertificateManager"/>
     /// will be checked for a default certificate.
     /// </summary>
-    internal bool IsDefaultCertificateEnabled { get; set; }
+    /// <remarks>
+    /// Defaults to false.
+    /// </remarks>
+    internal bool DisableDefaultCertificate { get; set; }
 
     /// <summary>
     /// Specifies a configuration Action to run for each newly created endpoint. Calling this again will replace
@@ -246,7 +249,7 @@ public class KestrelServerOptions
 
     internal void ApplyDefaultCertificate(HttpsConnectionAdapterOptions httpsOptions)
     {
-        if (!IsDefaultCertificateEnabled)
+        if (DisableDefaultCertificate)
         {
             throw new InvalidOperationException("Nope"); // TODO (acasey): message
         }

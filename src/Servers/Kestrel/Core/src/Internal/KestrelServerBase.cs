@@ -57,13 +57,13 @@ internal abstract class KestrelServerBase : IServer
         TransportManager = new TransportManager(transportFactoriesList, multiplexedTransportFactoriesList, ServiceContext);
     }
 
-    protected static ServiceContext CreateServiceContext(IOptions<KestrelServerOptions> options, ILoggerFactory loggerFactory, DiagnosticSource? diagnosticSource, bool isDefaultCertificateEnabled)
+    protected static ServiceContext CreateServiceContext(IOptions<KestrelServerOptions> options, ILoggerFactory loggerFactory, DiagnosticSource? diagnosticSource, bool disableDefaultCertificate)
     {
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(loggerFactory);
 
         var serverOptions = options.Value ?? new KestrelServerOptions();
-        serverOptions.IsDefaultCertificateEnabled = isDefaultCertificateEnabled; ;
+        serverOptions.DisableDefaultCertificate = disableDefaultCertificate; ;
         var trace = new KestrelTrace(loggerFactory);
         var connectionManager = new ConnectionManager(
             trace,
