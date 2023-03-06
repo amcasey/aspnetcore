@@ -211,7 +211,7 @@ public class KestrelServerOptions
     /// <remarks>
     /// Defaults to false.
     /// </remarks>
-    private bool DisableDefaultCertificate { get; set; }
+    internal bool DisableDefaultCertificate { get; set; }
 
     /// <summary>
     /// Specifies a configuration Action to run for each newly created endpoint. Calling this again will replace
@@ -391,8 +391,6 @@ public class KestrelServerOptions
             throw new InvalidOperationException($"{nameof(ApplicationServices)} must not be null. This is normally set automatically via {nameof(IConfigureOptions<KestrelServerOptions>)}.");
         }
 
-        this.DisableDefaultCertificate = false;
-
         var hostEnvironment = ApplicationServices.GetRequiredService<IHostEnvironment>();
         var serverLogger = ApplicationServices.GetRequiredService<ILogger<KestrelServer>>();
         var httpsLogger = ApplicationServices.GetRequiredService<ILogger<HttpsConnectionMiddleware>>();
@@ -413,8 +411,6 @@ public class KestrelServerOptions
     /// <returns>A <see cref="KestrelConfigurationLoader"/> for further endpoint configuration.</returns>
     public KestrelConfigurationLoader ConfigureSlim(IConfiguration config, bool reloadOnChange)
     {
-        this.DisableDefaultCertificate = true;
-
         var loader = KestrelConfigurationLoader.CreateLoaderSlim(this, config, reloadOnChange);
         ConfigurationLoader = loader;
         return loader;

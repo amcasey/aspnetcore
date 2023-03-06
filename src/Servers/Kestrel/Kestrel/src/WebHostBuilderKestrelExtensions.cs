@@ -83,7 +83,13 @@ public static class WebHostBuilderKestrelExtensions
             hostBuilder.UseNamedPipes();
         }
 
-        return hostBuilder;
+        return hostBuilder.ConfigureServices((_context, services) =>
+        {
+            services.Configure<KestrelServerOptions>(options =>
+            {
+                options.DisableDefaultCertificate = true;
+            });
+        });
     }
 
     /// <summary>
