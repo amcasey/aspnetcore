@@ -211,7 +211,7 @@ public class KestrelServerOptions
     /// <remarks>
     /// Defaults to false.
     /// </remarks>
-    internal bool DisableDefaultCertificate { get; set; }
+    private bool DisableDefaultCertificate { get; set; }
 
     /// <summary>
     /// Specifies a configuration Action to run for each newly created endpoint. Calling this again will replace
@@ -411,6 +411,7 @@ public class KestrelServerOptions
     /// <returns>A <see cref="KestrelConfigurationLoader"/> for further endpoint configuration.</returns>
     public KestrelConfigurationLoader ConfigureSlim(IConfiguration config, bool reloadOnChange)
     {
+        this.DisableDefaultCertificate = true;
         var loader = KestrelConfigurationLoader.CreateLoaderSlim(this, config, reloadOnChange);
         ConfigurationLoader = loader;
         return loader;

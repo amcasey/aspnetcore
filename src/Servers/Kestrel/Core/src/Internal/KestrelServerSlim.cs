@@ -18,7 +18,7 @@ internal sealed class KestrelServerSlim : KestrelServerBase
         IOptions<KestrelServerOptions> options,
         IEnumerable<IConnectionListenerFactory> transportFactories,
         ILoggerFactory loggerFactory)
-        : base(transportFactories, Array.Empty<IMultiplexedConnectionListenerFactory>(), CreateServiceContext(options, loggerFactory, diagnosticSource: null, disableDefaultCertificate: true))
+        : base(transportFactories, Array.Empty<IMultiplexedConnectionListenerFactory>(), CreateServiceContext(options, loggerFactory, diagnosticSource: null))
     {
     }
 
