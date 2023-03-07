@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "PlaintextApp": {
+      "commandName": "Project",
+      "environmentVariables": {
+        //"ASPNETCORE_URLS": "https://localhost:443"
+      }
+    }
+  }
+}

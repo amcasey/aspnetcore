@@ -1,71 +1,70 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.IO;
-using System.IO.Pipelines;
-using System.Net;
-using System.Runtime.CompilerServices;
-using System.Text;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Connections;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.Hosting;
+using System.Text.Json.Serialization;
 
-namespace PlaintextApp;
+var builder = WebApplication.CreateSlimBuilder(args);
+// No logging for benchmark scenario, template has AddConsole();
 
-public class Startup
+builder.WebHost.ConfigureKestrel((context, options) =>
 {
-    private static readonly byte[] _helloWorldBytes = Encoding.UTF8.GetBytes("Hello, World!");
+    //options.Configure(context.Configuration.GetSection("Kestrel"), reloadOnChange: true);
 
-    public void Configure(IApplicationBuilder app)
-    {
-        app.Run((httpContext) =>
+    options.Listen(
+        address: System.Net.IPAddress.Any,
+        port: 443,
+        configure: listenOptions =>
         {
-            var payload = _helloWorldBytes;
-            var response = httpContext.Response;
-
-            response.StatusCode = 200;
-            response.ContentType = "text/plain";
-            response.ContentLength = payload.Length;
-
-            return response.BodyWriter.WriteAsync(payload).GetAsTask();
+            listenOptions.Protocols = Microsoft.AspNetCore.Server.Kestrel.Core.HttpProtocols.Http1;
+            listenOptions.UseHttps();
+            //listenOptions.UseHttps(@"C:\Users\acasey\AppData\Roaming\ASP.NET\https\PlaintextApp.pfx", "1234");
         });
-    }
+});
 
-    public static async Task Main(string[] args)
-    {
-        var host = new HostBuilder()
-            .ConfigureWebHost(webHostBuilder =>
-            {
-                webHostBuilder
-                    .UseKestrel(options =>
-                    {
-                        options.Listen(IPAddress.Loopback, 5001);
-                    })
-                    .UseContentRoot(Directory.GetCurrentDirectory())
-                    .UseStartup<Startup>();
-            })
-            .Build();
+builder.Services.ConfigureHttpJsonOptions(options =>
+{
+    options.SerializerOptions.AddContext<AppJsonSerializerContext>();
+});
 
-        await host.RunAsync();
-    }
+var app = builder.Build();
+
+var todosApi = app.MapGroup("/todos");
+todosApi.MapGet("/", () => Todos.AllTodos);
+
+//// Keeping because it is in the template but not actually benchmarked.
+//todosApi.MapGet("/{id}", (int id) =>
+//    Todos.AllTodos.FirstOrDefault(a => a.Id == id) is { } todo
+//        ? Results.Ok(todo)
+//        : Results.NotFound());
+
+app.Lifetime.ApplicationStarted.Register(() => Console.WriteLine("Application started. Press Ctrl+C to shut down."));
+app.Run();
+
+[JsonSerializable(typeof(Todo[]))]
+internal partial class AppJsonSerializerContext : JsonSerializerContext
+{
+
 }
 
-internal static class ValueTaskExtensions
+public class Todo
 {
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static Task GetAsTask(this in ValueTask<FlushResult> valueTask)
-    {
-        if (valueTask.IsCompletedSuccessfully)
+    public int Id { get; set; }
+
+    public string? Title { get; set; }
+
+    public DateOnly? DueBy { get; set; }
+
+    public bool IsComplete { get; set; }
+}
+
+static class Todos
+{
+    internal static readonly Todo[] AllTodos = new Todo[]
         {
-            // Signal consumption to the IValueTaskSource
-            valueTask.GetAwaiter().GetResult();
-            return Task.CompletedTask;
-        }
-        else
-        {
-            return valueTask.AsTask();
-        }
-    }
+            new Todo() { Id = 0, Title = "Wash the dishes.", DueBy = DateOnly.FromDateTime(DateTime.Now), IsComplete = true },
+            new Todo() { Id = 1, Title = "Dry the dishes.", DueBy = DateOnly.FromDateTime(DateTime.Now), IsComplete = true },
+            new Todo() { Id = 2, Title = "Turn the dishes over.", DueBy = DateOnly.FromDateTime(DateTime.Now), IsComplete = false },
+            new Todo() { Id = 3, Title = "Walk the kangaroo.", DueBy = DateOnly.FromDateTime(DateTime.Now.AddDays(1)), IsComplete = false },
+            new Todo() { Id = 4, Title = "Call Grandma.", DueBy = DateOnly.FromDateTime(DateTime.Now.AddDays(1)), IsComplete = false },
+        };
 }
