@@ -20,11 +20,14 @@ public static class WebHostBuilderQuicExtensions
     /// <returns>The <see cref="IWebHostBuilder"/>.</returns>
     public static IWebHostBuilder UseQuic(this IWebHostBuilder hostBuilder)
     {
+        // TODO (acasey): set a flag showing we tried
+
         if (QuicListener.IsSupported)
         {
             return hostBuilder.ConfigureServices(services =>
             {
                 services.AddSingleton<IMultiplexedConnectionListenerFactory, QuicTransportFactory>();
+                // TODO (acasey): expose TransportManager.BindAsync
             });
         }
 

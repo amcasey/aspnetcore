@@ -1,7 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.Diagnostics.CodeAnalysis;
 using System.Net.Http;
 using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Hosting.Server;
@@ -32,7 +31,7 @@ public static class WebHostBuilderKestrelExtensions
     public static IWebHostBuilder UseKestrelSlim(this IWebHostBuilder hostBuilder)
     {
         // Since we are not calling hostBuilder.UseQuic, the IMultiplexedConnectionListenerFactory will never be registered with DI
-        return UseKestrelWorker<KestrelServerSlim>(hostBuilder, useQuic: null);
+        return UseKestrelWorker(hostBuilder, useQuic: null);
     }
 
     /// <summary>
@@ -46,7 +45,7 @@ public static class WebHostBuilderKestrelExtensions
     /// </returns>
     public static IWebHostBuilder UseKestrel(this IWebHostBuilder hostBuilder)
     {
-        return UseKestrelWorker<KestrelServerImpl>(hostBuilder, UseQuic);
+        return UseKestrelWorker(hostBuilder, UseQuic);
 
         static void UseQuic(IWebHostBuilder hostBuilder)
         {
@@ -56,14 +55,15 @@ public static class WebHostBuilderKestrelExtensions
                 // https://github.com/dotnet/runtime/blob/a5f3676cc71e176084f0f7f1f6beeecd86fbeafc/src/libraries/System.Net.Http/src/System/Net/Http/SocketsHttpHandler/ConnectHelper.cs#L118-L119
                 options.DefaultStreamErrorCode = (long)Http3ErrorCode.RequestCancelled;
                 options.DefaultCloseErrorCode = (long)Http3ErrorCode.NoError;
+
+                // TODO (acasey): set a flag indicating this was called
             });
         }
     }
 
-    private static IWebHostBuilder UseKestrelWorker<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TServer>(
+    private static IWebHostBuilder UseKestrelWorker(
         this IWebHostBuilder hostBuilder,
         Action<IWebHostBuilder>? useQuic)
-        where TServer : class, IServer
     {
         hostBuilder.ConfigureServices(services =>
         {
@@ -72,8 +72,7 @@ public static class WebHostBuilderKestrelExtensions
 
             services.AddTransient<IConfigureOptions<KestrelServerOptions>, KestrelServerOptionsSetup>();
 
-            // TODO (acasey): subsequently use services.RemoveAll or .Replace to change from Slim to Impl?
-            services.AddSingleton<IServer, TServer>();
+            services.AddSingleton<IServer, KestrelServerImpl>();
         });
 
         useQuic?.Invoke(hostBuilder);
