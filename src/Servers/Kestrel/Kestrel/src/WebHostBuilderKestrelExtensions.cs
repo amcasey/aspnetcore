@@ -58,6 +58,7 @@ public static class WebHostBuilderKestrelExtensions
                     options.DefaultStreamErrorCode = (long)Http3ErrorCode.RequestCancelled;
                     options.DefaultCloseErrorCode = (long)Http3ErrorCode.NoError;
                 })
+                // TODO (acasey): extract this into an extension method - UseHttpsConfiguration?
                 .ConfigureServices(services =>
                 {
                     services.AddSingleton<IMultiplexedTransportManager, MultiplexedTransportManager>();

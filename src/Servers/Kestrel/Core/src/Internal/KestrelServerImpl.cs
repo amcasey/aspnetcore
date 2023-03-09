@@ -19,7 +19,7 @@ internal sealed class KestrelServerImpl : IServer
     private readonly ServerAddressesFeature _serverAddresses;
 
     private readonly ITransportManager _transportManager;
-    private readonly IMultiplexedTransportManager _multiplexedTransportManager;
+    private readonly IMultiplexedTransportManager? _multiplexedTransportManager;
 
     private readonly SemaphoreSlim _bindSemaphore = new SemaphoreSlim(initialCount: 1);
     private bool _hasStarted;
@@ -31,10 +31,17 @@ internal sealed class KestrelServerImpl : IServer
 
     public KestrelServerImpl(
         ServiceContext serviceContext,
+        ITransportManager transportManager)
+        : this(serviceContext, transportManager, multiplexedTransportManager: null)
+    {
+    }
+
+    public KestrelServerImpl(
+        ServiceContext serviceContext,
         ITransportManager transportManager,
-        IMultiplexedTransportManager multiplexedTransportManager)
-{
-        if (!transportManager.HasFactories && !multiplexedTransportManager.HasFactories)
+        IMultiplexedTransportManager? multiplexedTransportManager)
+    {
+        if (!transportManager.HasFactories && (multiplexedTransportManager is null || !multiplexedTransportManager.HasFactories))
         {
             throw new InvalidOperationException(CoreStrings.TransportNotFound);
         }
@@ -113,15 +120,17 @@ internal sealed class KestrelServerImpl : IServer
                     throw new InvalidOperationException("You need to call UseQuic"); // TODO (acasey): message
                 }
 
+                bool haveMultiplexedFactories = _multiplexedTransportManager?.HasFactories == true;
+
                 // Quic isn't registered if it's not supported, throw if we can't fall back to 1 or 2
-                if (hasHttp3 && !_multiplexedTransportManager.HasFactories && !(hasHttp1 || hasHttp2))
+                if (hasHttp3 && !haveMultiplexedFactories && !(hasHttp1 || hasHttp2))
                 {
                     throw new InvalidOperationException("This platform doesn't support QUIC or HTTP/3.");
                 }
 
                 // Disable adding alt-svc header if endpoint has configured not to or there is no
                 // multiplexed transport factory, which happens if QUIC isn't supported.
-                var addAltSvcHeader = !options.DisableAltSvcHeader && _multiplexedTransportManager.HasFactories;
+                var addAltSvcHeader = !options.DisableAltSvcHeader && haveMultiplexedFactories;
 
                 var configuredEndpoint = options.EndPoint;
 
@@ -144,7 +153,7 @@ internal sealed class KestrelServerImpl : IServer
                     options.EndPoint = await _transportManager.BindAsync(configuredEndpoint, connectionDelegate, options.EndpointConfig, onBindCancellationToken).ConfigureAwait(false);
                 }
 
-                if (hasHttp3 && _multiplexedTransportManager.HasFactories)
+                if (hasHttp3 && haveMultiplexedFactories)
                 {
                     // Check if a previous transport has changed the endpoint. If it has then the endpoint is dynamic and we can't guarantee it will work for other transports.
                     // For more details, see https://github.com/dotnet/aspnetcore/issues/42982
@@ -161,7 +170,7 @@ internal sealed class KestrelServerImpl : IServer
                         multiplexedConnectionDelegate = EnforceConnectionLimit(multiplexedConnectionDelegate, Options.Limits.MaxConcurrentConnections, Trace);
 
                         // TODO (acasey): _transportManager.BindAsync is the problem - it pull in certs
-                        options.EndPoint = await _multiplexedTransportManager.BindAsync(configuredEndpoint, multiplexedConnectionDelegate, options, onBindCancellationToken).ConfigureAwait(false);
+                        options.EndPoint = await _multiplexedTransportManager!.BindAsync(configuredEndpoint, multiplexedConnectionDelegate, options, onBindCancellationToken).ConfigureAwait(false);
                     }
                 }
             }
@@ -199,7 +208,10 @@ internal sealed class KestrelServerImpl : IServer
         try
         {
             await _transportManager.StopAsync(cancellationToken).ConfigureAwait(false);
-            await _multiplexedTransportManager.StopAsync(cancellationToken).ConfigureAwait(false);
+            if (_multiplexedTransportManager is not null)
+            {
+                await _multiplexedTransportManager.StopAsync(cancellationToken).ConfigureAwait(false);
+            }
         }
         catch (Exception ex)
         {
@@ -302,7 +314,10 @@ internal sealed class KestrelServerImpl : IServer
                 // as the unbinding finished for the given endpoint rather than wait for all transports to unbind first.
                 var configsToStop = endpointsToStop.Select(lo => lo.EndpointConfig!).ToList();
                 await _transportManager.StopEndpointsAsync(configsToStop, combinedCts.Token).ConfigureAwait(false);
-                await _multiplexedTransportManager.StopEndpointsAsync(configsToStop, combinedCts.Token).ConfigureAwait(false);
+                if (_multiplexedTransportManager is not null)
+                {
+                    await _multiplexedTransportManager.StopEndpointsAsync(configsToStop, combinedCts.Token).ConfigureAwait(false);
+                }
 
                 foreach (var listenOption in endpointsToStop)
                 {
