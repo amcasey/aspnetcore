@@ -24,10 +24,11 @@ public class KestrelServer : IServer
     /// <param name="loggerFactory">The <see cref="ILoggerFactory"/>.</param>
     public KestrelServer(IOptions<KestrelServerOptions> options, IConnectionListenerFactory transportFactory, ILoggerFactory loggerFactory)
     {
-        _innerKestrelServer = new KestrelServerImpl(
-            options,
-            new[] { transportFactory ?? throw new ArgumentNullException(nameof(transportFactory)) },
-            loggerFactory);
+        _innerKestrelServer = null!; // TODO (acasey)
+        //_innerKestrelServer = new KestrelServerImpl(
+        //    options,
+        //    new[] { transportFactory ?? throw new ArgumentNullException(nameof(transportFactory)) },
+        //    loggerFactory);
     }
 
     /// <inheritdoc />

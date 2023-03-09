@@ -14,160 +14,27 @@ using Microsoft.AspNetCore.Server.Kestrel.Https.Internal;
 
 namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure;
 
-internal sealed class TransportManager
+internal abstract class TransportManagerBase
 {
     private readonly List<ActiveTransport> _transports = new List<ActiveTransport>();
 
-    private readonly List<IConnectionListenerFactory> _transportFactories;
-    private readonly List<IMultiplexedConnectionListenerFactory> _multiplexedTransportFactories;
     private readonly ServiceContext _serviceContext;
 
-    public TransportManager(
-        List<IConnectionListenerFactory> transportFactories,
-        List<IMultiplexedConnectionListenerFactory> multiplexedTransportFactories,
-        ServiceContext serviceContext)
+    protected TransportManagerBase(ServiceContext serviceContext)
     {
-        _transportFactories = transportFactories;
-        _multiplexedTransportFactories = multiplexedTransportFactories;
         _serviceContext = serviceContext;
     }
 
-    private KestrelTrace Trace => _serviceContext.Log;
+    protected KestrelTrace Trace => _serviceContext.Log;
 
-    public async Task<EndPoint> BindAsync(EndPoint endPoint, ConnectionDelegate connectionDelegate, EndpointConfig? endpointConfig, CancellationToken cancellationToken)
-    {
-        if (_transportFactories.Count == 0)
-        {
-            throw new InvalidOperationException($"Cannot bind with {nameof(ConnectionDelegate)} no {nameof(IConnectionListenerFactory)} is registered.");
-        }
-
-        foreach (var transportFactory in _transportFactories)
-        {
-            var selector = transportFactory as IConnectionListenerFactorySelector;
-            if (CanBindFactory(endPoint, selector))
-            {
-                var transport = await transportFactory.BindAsync(endPoint, cancellationToken).ConfigureAwait(false);
-                StartAcceptLoop(new GenericConnectionListener(transport), c => connectionDelegate(c), endpointConfig);
-                return transport.EndPoint;
-            }
-        }
-
-        // Special case situation where a named pipe endpoint is specified and there is no matching transport.
-        // The named pipe transport is only registered on Windows. The test is done at this point so there is
-        // the opportunity for the app to register their own transport to handle named pipe endpoints.
-        if (endPoint is NamedPipeEndPoint && !OperatingSystem.IsWindows())
-        {
-            throw new PlatformNotSupportedException("Named pipes transport requires a Windows operating system.");
-        }
-
-        throw new InvalidOperationException($"No registered {nameof(IConnectionListenerFactory)} supports endpoint {endPoint.GetType().Name}: {endPoint}");
-    }
-
-    public async Task<EndPoint> BindAsync(EndPoint endPoint, MultiplexedConnectionDelegate multiplexedConnectionDelegate, ListenOptions listenOptions, CancellationToken cancellationToken)
-    {
-        if (_multiplexedTransportFactories.Count == 0)
-        {
-            throw new InvalidOperationException($"Cannot bind with {nameof(MultiplexedConnectionDelegate)} no {nameof(IMultiplexedConnectionListenerFactory)} is registered.");
-        }
-
-        var features = new FeatureCollection();
-
-        // HttpsOptions or HttpsCallbackOptions should always be set in production, but it's not set for InMemory tests.
-        // The QUIC transport will check if TlsConnectionCallbackOptions is missing.
-        if (listenOptions.HttpsOptions != null)
-        {
-            var sslServerAuthenticationOptions = HttpsConnectionMiddleware.CreateHttp3Options(listenOptions.HttpsOptions);
-            features.Set(new TlsConnectionCallbackOptions
-            {
-                ApplicationProtocols = sslServerAuthenticationOptions.ApplicationProtocols ?? new List<SslApplicationProtocol> { SslApplicationProtocol.Http3 },
-                OnConnection = (context, cancellationToken) => ValueTask.FromResult(sslServerAuthenticationOptions),
-                OnConnectionState = null,
-            });
-        }
-        else if (listenOptions.HttpsCallbackOptions != null)
-        {
-            features.Set(new TlsConnectionCallbackOptions
-            {
-                ApplicationProtocols = new List<SslApplicationProtocol> { SslApplicationProtocol.Http3 },
-                OnConnection = (context, cancellationToken) =>
-                {
-                    return listenOptions.HttpsCallbackOptions.OnConnection(new TlsHandshakeCallbackContext
-                    {
-                        ClientHelloInfo = context.ClientHelloInfo,
-                        CancellationToken = cancellationToken,
-                        State = context.State,
-                        Connection = new ConnectionContextAdapter(context.Connection),
-                    });
-                },
-                OnConnectionState = listenOptions.HttpsCallbackOptions.OnConnectionState,
-            });
-        }
-
-        foreach (var multiplexedTransportFactory in _multiplexedTransportFactories)
-        {
-            var selector = multiplexedTransportFactory as IConnectionListenerFactorySelector;
-            if (CanBindFactory(endPoint, selector))
-            {
-                var transport = await multiplexedTransportFactory.BindAsync(endPoint, features, cancellationToken).ConfigureAwait(false);
-                StartAcceptLoop(new GenericMultiplexedConnectionListener(transport), c => multiplexedConnectionDelegate(c), listenOptions.EndpointConfig);
-                return transport.EndPoint;
-            }
-        }
-
-        throw new InvalidOperationException($"No registered {nameof(IMultiplexedConnectionListenerFactory)} supports endpoint {endPoint.GetType().Name}: {endPoint}");
-    }
-
-    private static bool CanBindFactory(EndPoint endPoint, IConnectionListenerFactorySelector? selector)
+    protected static bool CanBindFactory(EndPoint endPoint, IConnectionListenerFactorySelector? selector)
     {
         // By default, the last registered factory binds to the endpoint.
         // A factory can implement IConnectionListenerFactorySelector to decide whether it can bind to the endpoint.
         return selector?.CanBind(endPoint) ?? true;
     }
 
-    /// <summary>
-    /// TlsHandshakeCallbackContext.Connection is ConnectionContext but QUIC connection only implements BaseConnectionContext.
-    /// </summary>
-    private sealed class ConnectionContextAdapter : ConnectionContext
-    {
-        private readonly BaseConnectionContext _inner;
-
-        public ConnectionContextAdapter(BaseConnectionContext inner) => _inner = inner;
-
-        public override IDuplexPipe Transport
-        {
-            get => throw new NotSupportedException("Not supported by HTTP/3 connections.");
-            set => throw new NotSupportedException("Not supported by HTTP/3 connections.");
-        }
-        public override string ConnectionId
-        {
-            get => _inner.ConnectionId;
-            set => _inner.ConnectionId = value;
-        }
-        public override IFeatureCollection Features => _inner.Features;
-        public override IDictionary<object, object?> Items
-        {
-            get => _inner.Items;
-            set => _inner.Items = value;
-        }
-        public override EndPoint? LocalEndPoint
-        {
-            get => _inner.LocalEndPoint;
-            set => _inner.LocalEndPoint = value;
-        }
-        public override EndPoint? RemoteEndPoint
-        {
-            get => _inner.RemoteEndPoint;
-            set => _inner.RemoteEndPoint = value;
-        }
-        public override CancellationToken ConnectionClosed
-        {
-            get => _inner.ConnectionClosed;
-            set => _inner.ConnectionClosed = value;
-        }
-        public override ValueTask DisposeAsync() => _inner.DisposeAsync();
-    }
-
-    private void StartAcceptLoop<T>(IConnectionListener<T> connectionListener, Func<T, Task> connectionDelegate, EndpointConfig? endpointConfig) where T : BaseConnectionContext
+    protected void StartAcceptLoop<T>(IConnectionListener<T> connectionListener, Func<T, Task> connectionDelegate, EndpointConfig? endpointConfig) where T : BaseConnectionContext
     {
         var transportConnectionManager = new TransportConnectionManager(_serviceContext.ConnectionManager);
         var connectionDispatcher = new ConnectionDispatcher<T>(_serviceContext, connectionDelegate, transportConnectionManager);
@@ -258,6 +125,48 @@ internal sealed class TransportManager
             return ConnectionListener.DisposeAsync();
         }
     }
+}
+
+internal sealed class TransportManager : TransportManagerBase
+{
+    private readonly List<IConnectionListenerFactory> _factories;
+
+    public TransportManager(
+        ServiceContext serviceContext,
+        IEnumerable<IConnectionListenerFactory> factories)
+        : base(serviceContext)
+    {
+        _factories = factories.Reverse().ToList();
+    }
+
+    public async Task<EndPoint> BindAsync(EndPoint endPoint, ConnectionDelegate connectionDelegate, EndpointConfig? endpointConfig, CancellationToken cancellationToken)
+    {
+        if (_factories.Count == 0)
+        {
+            throw new InvalidOperationException($"Cannot bind with {nameof(ConnectionDelegate)} no {nameof(IConnectionListenerFactory)} is registered.");
+        }
+
+        foreach (var factory in _factories)
+        {
+            var selector = factory as IConnectionListenerFactorySelector;
+            if (CanBindFactory(endPoint, selector))
+            {
+                var transport = await factory.BindAsync(endPoint, cancellationToken).ConfigureAwait(false);
+                StartAcceptLoop(new GenericConnectionListener(transport), c => connectionDelegate(c), endpointConfig);
+                return transport.EndPoint;
+            }
+        }
+
+        // Special case situation where a named pipe endpoint is specified and there is no matching transport.
+        // The named pipe transport is only registered on Windows. The test is done at this point so there is
+        // the opportunity for the app to register their own transport to handle named pipe endpoints.
+        if (endPoint is NamedPipeEndPoint && !OperatingSystem.IsWindows())
+        {
+            throw new PlatformNotSupportedException("Named pipes transport requires a Windows operating system.");
+        }
+
+        throw new InvalidOperationException($"No registered {nameof(IConnectionListenerFactory)} supports endpoint {endPoint.GetType().Name}: {endPoint}");
+    }
 
     private sealed class GenericConnectionListener : IConnectionListener<ConnectionContext>
     {
@@ -278,6 +187,116 @@ internal sealed class TransportManager
 
         public ValueTask DisposeAsync()
             => _connectionListener.DisposeAsync();
+    }
+}
+
+internal sealed class MultiplexedTransportManager : TransportManagerBase
+{
+    private readonly List<IMultiplexedConnectionListenerFactory> _factories;
+
+    public MultiplexedTransportManager(
+        ServiceContext serviceContext,
+        IEnumerable<IMultiplexedConnectionListenerFactory> factories)
+        : base(serviceContext)
+    {
+        _factories = factories.Reverse().ToList();
+    }
+
+    public async Task<EndPoint> BindAsync(EndPoint endPoint, MultiplexedConnectionDelegate multiplexedConnectionDelegate, ListenOptions listenOptions, CancellationToken cancellationToken)
+    {
+        if (_factories.Count == 0)
+        {
+            throw new InvalidOperationException($"Cannot bind with {nameof(MultiplexedConnectionDelegate)} no {nameof(IMultiplexedConnectionListenerFactory)} is registered.");
+        }
+
+        var features = new FeatureCollection();
+
+        // HttpsOptions or HttpsCallbackOptions should always be set in production, but it's not set for InMemory tests.
+        // The QUIC transport will check if TlsConnectionCallbackOptions is missing.
+        if (listenOptions.HttpsOptions != null)
+        {
+            var sslServerAuthenticationOptions = HttpsConnectionMiddleware.CreateHttp3Options(listenOptions.HttpsOptions);
+            features.Set(new TlsConnectionCallbackOptions
+            {
+                ApplicationProtocols = sslServerAuthenticationOptions.ApplicationProtocols ?? new List<SslApplicationProtocol> { SslApplicationProtocol.Http3 },
+                OnConnection = (context, cancellationToken) => ValueTask.FromResult(sslServerAuthenticationOptions),
+                OnConnectionState = null,
+            });
+        }
+        else if (listenOptions.HttpsCallbackOptions != null)
+        {
+            features.Set(new TlsConnectionCallbackOptions
+            {
+                ApplicationProtocols = new List<SslApplicationProtocol> { SslApplicationProtocol.Http3 },
+                OnConnection = (context, cancellationToken) =>
+                {
+                    return listenOptions.HttpsCallbackOptions.OnConnection(new TlsHandshakeCallbackContext
+                    {
+                        ClientHelloInfo = context.ClientHelloInfo,
+                        CancellationToken = cancellationToken,
+                        State = context.State,
+                        Connection = new ConnectionContextAdapter(context.Connection),
+                    });
+                },
+                OnConnectionState = listenOptions.HttpsCallbackOptions.OnConnectionState,
+            });
+        }
+
+        foreach (var factory in _factories)
+        {
+            var selector = factory as IConnectionListenerFactorySelector;
+            if (CanBindFactory(endPoint, selector))
+            {
+                var transport = await factory.BindAsync(endPoint, features, cancellationToken).ConfigureAwait(false);
+                StartAcceptLoop(new GenericMultiplexedConnectionListener(transport), c => multiplexedConnectionDelegate(c), listenOptions.EndpointConfig);
+                return transport.EndPoint;
+            }
+        }
+
+        throw new InvalidOperationException($"No registered {nameof(IMultiplexedConnectionListenerFactory)} supports endpoint {endPoint.GetType().Name}: {endPoint}");
+    }
+
+    /// <summary>
+    /// TlsHandshakeCallbackContext.Connection is ConnectionContext but QUIC connection only implements BaseConnectionContext.
+    /// </summary>
+    private sealed class ConnectionContextAdapter : ConnectionContext
+    {
+        private readonly BaseConnectionContext _inner;
+
+        public ConnectionContextAdapter(BaseConnectionContext inner) => _inner = inner;
+
+        public override IDuplexPipe Transport
+        {
+            get => throw new NotSupportedException("Not supported by HTTP/3 connections.");
+            set => throw new NotSupportedException("Not supported by HTTP/3 connections.");
+        }
+        public override string ConnectionId
+        {
+            get => _inner.ConnectionId;
+            set => _inner.ConnectionId = value;
+        }
+        public override IFeatureCollection Features => _inner.Features;
+        public override IDictionary<object, object?> Items
+        {
+            get => _inner.Items;
+            set => _inner.Items = value;
+        }
+        public override EndPoint? LocalEndPoint
+        {
+            get => _inner.LocalEndPoint;
+            set => _inner.LocalEndPoint = value;
+        }
+        public override EndPoint? RemoteEndPoint
+        {
+            get => _inner.RemoteEndPoint;
+            set => _inner.RemoteEndPoint = value;
+        }
+        public override CancellationToken ConnectionClosed
+        {
+            get => _inner.ConnectionClosed;
+            set => _inner.ConnectionClosed = value;
+        }
+        public override ValueTask DisposeAsync() => _inner.DisposeAsync();
     }
 
     private sealed class GenericMultiplexedConnectionListener : IConnectionListener<MultiplexedConnectionContext>

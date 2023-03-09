@@ -2,18 +2,14 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Diagnostics;
-using System.IO.Pipelines;
 using System.Linq;
-using System.Net;
 using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Server.Kestrel.Core.Internal;
-using Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http;
 using Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Primitives;
 
 namespace Microsoft.AspNetCore.Server.Kestrel.Core;
@@ -21,10 +17,9 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core;
 internal sealed class KestrelServerImpl : IServer
 {
     private readonly ServerAddressesFeature _serverAddresses;
+
     private readonly TransportManager _transportManager;
-    private readonly List<IConnectionListenerFactory> _transportFactories;
-    private readonly List<IMultiplexedConnectionListenerFactory> _multiplexedTransportFactories;
-    private readonly IMultiplexedConnectionBinder? _multiplexedConnectionBinder;
+    private readonly MultiplexedTransportManager? _multiplexedTransportManager;
 
     private readonly SemaphoreSlim _bindSemaphore = new SemaphoreSlim(initialCount: 1);
     private bool _hasStarted;
@@ -35,97 +30,29 @@ internal sealed class KestrelServerImpl : IServer
     private IDisposable? _configChangedRegistration;
 
     public KestrelServerImpl(
-        IOptions<KestrelServerOptions> options,
-        IEnumerable<IConnectionListenerFactory> transportFactories,
-        ILoggerFactory loggerFactory)
-        : this(transportFactories, Array.Empty<IMultiplexedConnectionListenerFactory>(), multiplexedConnectionBinder: null, CreateServiceContext(options, loggerFactory, null))
+        ServiceContext serviceContext,
+        TransportManager transportManager)
+        : this(serviceContext, transportManager, multiplexedTransportManager: null)
     {
     }
 
     public KestrelServerImpl(
-        IOptions<KestrelServerOptions> options,
-        IEnumerable<IConnectionListenerFactory> transportFactories,
-        IEnumerable<IMultiplexedConnectionListenerFactory> multiplexedFactories,
-        IMultiplexedConnectionBinder multiplexedConnectionBinder,
-        ILoggerFactory loggerFactory)
-        : this(transportFactories, multiplexedFactories, multiplexedConnectionBinder, CreateServiceContext(options, loggerFactory, null))
-    {
-    }
-
-    public KestrelServerImpl(
-        IOptions<KestrelServerOptions> options,
-        IEnumerable<IConnectionListenerFactory> transportFactories,
-        IEnumerable<IMultiplexedConnectionListenerFactory> multiplexedFactories,
-        IMultiplexedConnectionBinder multiplexedConnectionBinder,
-        ILoggerFactory loggerFactory,
-        DiagnosticSource diagnosticSource)
-        : this(transportFactories, multiplexedFactories, multiplexedConnectionBinder, CreateServiceContext(options, loggerFactory, diagnosticSource))
-    {
-    }
-
-    // For testing
-
-    internal KestrelServerImpl(
-        IEnumerable<IConnectionListenerFactory> transportFactories,
-        IEnumerable<IMultiplexedConnectionListenerFactory> multiplexedFactories,
-        IMultiplexedConnectionBinder multiplexedConnectionBinder,
-        ServiceContext serviceContext)
-    {
-        ArgumentNullException.ThrowIfNull(transportFactories);
-
-        _transportFactories = transportFactories.Reverse().ToList();
-        _multiplexedTransportFactories = multiplexedFactories.Reverse().ToList();
-        _multiplexedConnectionBinder = multiplexedConnectionBinder;
-
-        if (_transportFactories.Count == 0 && _multiplexedTransportFactories.Count == 0)
-        {
-            throw new InvalidOperationException(CoreStrings.TransportNotFound);
-        }
+        ServiceContext serviceContext,
+        TransportManager transportManager,
+        MultiplexedTransportManager? multiplexedTransportManager)
+{
+        // TODO (acasey): restore this check
+        // throw new InvalidOperationException(CoreStrings.TransportNotFound);
 
         ServiceContext = serviceContext;
+        _transportManager = transportManager;
+        _multiplexedTransportManager = multiplexedTransportManager;
 
-        Features = new FeatureCollection();
         _serverAddresses = new ServerAddressesFeature();
         Features.Set<IServerAddressesFeature>(_serverAddresses);
-
-        _transportManager = new TransportManager(_transportFactories, _multiplexedTransportFactories, ServiceContext);
     }
 
-    private static ServiceContext CreateServiceContext(IOptions<KestrelServerOptions> options, ILoggerFactory loggerFactory, DiagnosticSource? diagnosticSource)
-    {
-        ArgumentNullException.ThrowIfNull(options);
-        ArgumentNullException.ThrowIfNull(loggerFactory);
-
-        var serverOptions = options.Value ?? new KestrelServerOptions();
-        var trace = new KestrelTrace(loggerFactory);
-        var connectionManager = new ConnectionManager(
-            trace,
-            serverOptions.Limits.MaxConcurrentUpgradedConnections);
-
-        var heartbeatManager = new HeartbeatManager(connectionManager);
-        var dateHeaderValueManager = new DateHeaderValueManager();
-
-        var heartbeat = new Heartbeat(
-            new IHeartbeatHandler[] { dateHeaderValueManager, heartbeatManager },
-            new SystemClock(),
-            DebuggerWrapper.Singleton,
-            trace);
-
-        return new ServiceContext
-        {
-            Log = trace,
-            Scheduler = PipeScheduler.ThreadPool,
-            HttpParser = new HttpParser<Http1ParsingHandler>(trace.IsEnabled(LogLevel.Information), serverOptions.DisableHttp1LineFeedTerminators),
-            SystemClock = heartbeatManager,
-            DateHeaderValueManager = dateHeaderValueManager,
-            ConnectionManager = connectionManager,
-            Heartbeat = heartbeat,
-            ServerOptions = serverOptions,
-            DiagnosticSource = diagnosticSource
-        };
-    }
-
-    public IFeatureCollection Features { get; }
+    public IFeatureCollection Features { get; } = new FeatureCollection();
 
     public KestrelServerOptions Options => ServiceContext.ServerOptions;
 
@@ -192,14 +119,14 @@ internal sealed class KestrelServerImpl : IServer
                 }
 
                 // Quic isn't registered if it's not supported, throw if we can't fall back to 1 or 2
-                if (hasHttp3 && _multiplexedTransportFactories.Count == 0 && !(hasHttp1 || hasHttp2))
+                if (hasHttp3 && _multiplexedTransportManager is null && !(hasHttp1 || hasHttp2))
                 {
                     throw new InvalidOperationException("This platform doesn't support QUIC or HTTP/3.");
                 }
 
                 // Disable adding alt-svc header if endpoint has configured not to or there is no
                 // multiplexed transport factory, which happens if QUIC isn't supported.
-                var addAltSvcHeader = !options.DisableAltSvcHeader && _multiplexedTransportFactories.Count > 0;
+                var addAltSvcHeader = !options.DisableAltSvcHeader && _multiplexedTransportManager is not null;
 
                 var configuredEndpoint = options.EndPoint;
 
@@ -208,10 +135,8 @@ internal sealed class KestrelServerImpl : IServer
                     || options.Protocols == HttpProtocols.None) // TODO a test fails because it doesn't throw an exception in the right place
                                                                 // when there is no HttpProtocols in KestrelServer, can we remove/change the test?
                 {
-                    if (_transportFactories.Count == 0)
-                    {
-                        throw new InvalidOperationException($"Cannot start HTTP/1.x or HTTP/2 server if no {nameof(IConnectionListenerFactory)} is registered.");
-                    }
+                    // TODO (acasey) restore this check
+                    // throw new InvalidOperationException($"Cannot start HTTP/1.x or HTTP/2 server if no {nameof(IConnectionListenerFactory)} is registered.");
 
                     options.UseHttpServer(ServiceContext, application, options.Protocols, addAltSvcHeader);
                     var connectionDelegate = options.Build();
@@ -222,7 +147,7 @@ internal sealed class KestrelServerImpl : IServer
                     options.EndPoint = await _transportManager.BindAsync(configuredEndpoint, connectionDelegate, options.EndpointConfig, onBindCancellationToken).ConfigureAwait(false);
                 }
 
-                if (hasHttp3 && _multiplexedTransportFactories.Count > 0)
+                if (hasHttp3 && _multiplexedTransportManager is not null)
                 {
                     // Check if a previous transport has changed the endpoint. If it has then the endpoint is dynamic and we can't guarantee it will work for other transports.
                     // For more details, see https://github.com/dotnet/aspnetcore/issues/42982
@@ -239,7 +164,7 @@ internal sealed class KestrelServerImpl : IServer
                         multiplexedConnectionDelegate = EnforceConnectionLimit(multiplexedConnectionDelegate, Options.Limits.MaxConcurrentConnections, Trace);
 
                         // TODO (acasey): _transportManager.BindAsync is the problem - it pull in certs
-                        options.EndPoint = await _multiplexedConnectionBinder!.BindAsync(_transportManager.BindAsync, configuredEndpoint, multiplexedConnectionDelegate, options, onBindCancellationToken).ConfigureAwait(false);
+                        options.EndPoint = await _multiplexedTransportManager.BindAsync(configuredEndpoint, multiplexedConnectionDelegate, options, onBindCancellationToken).ConfigureAwait(false);
                     }
                 }
             }
@@ -451,35 +376,5 @@ internal sealed class KestrelServerImpl : IServer
         }
 
         return new ConnectionLimitMiddleware<MultiplexedConnectionContext>(c => innerDelegate(c), connectionLimit.Value, trace).OnConnectionAsync;
-    }
-}
-
-// TODO (acasey): delete
-internal delegate Task<EndPoint> MultiplexedConnectionBindAsync(
-    EndPoint endPoint,
-    MultiplexedConnectionDelegate multiplexedConnectionDelegate,
-    ListenOptions listenOptions,
-    CancellationToken cancellationToken);
-
-internal interface IMultiplexedConnectionBinder
-{
-    Task<EndPoint> BindAsync(
-        MultiplexedConnectionBindAsync bindAsync,
-        EndPoint endPoint,
-        MultiplexedConnectionDelegate multiplexedConnectionDelegate,
-        ListenOptions listenOptions,
-        CancellationToken cancellationToken);
-}
-
-internal sealed class MultiplexedConnectionBinder : IMultiplexedConnectionBinder
-{
-    public Task<EndPoint> BindAsync(
-        MultiplexedConnectionBindAsync bindAsync,
-        EndPoint endPoint,
-        MultiplexedConnectionDelegate multiplexedConnectionDelegate,
-        ListenOptions listenOptions,
-        CancellationToken cancellationToken)
-    {
-        return bindAsync(endPoint, multiplexedConnectionDelegate, listenOptions, cancellationToken);
     }
 }
