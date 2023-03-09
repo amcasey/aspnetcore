@@ -159,9 +159,9 @@ internal sealed class KestrelServerImpl : IServer
 
                 // Filter out invalid combinations.
 
-                if (hasHttp3 && _multiplexedConnectionBinder is null)
+                if (hasHttp3 && Options.ApplicationServices.GetService(typeof(MultiplexedConnectionMarkerService)) is null)
                 {
-                    throw new InvalidOperationException("Nope"); // TODO (acasey): message
+                    throw new InvalidOperationException("You need to call UseQuic"); // TODO (acasey): message
                 }
 
                 if (!hasTls)
@@ -238,6 +238,7 @@ internal sealed class KestrelServerImpl : IServer
                         // Add the connection limit middleware
                         multiplexedConnectionDelegate = EnforceConnectionLimit(multiplexedConnectionDelegate, Options.Limits.MaxConcurrentConnections, Trace);
 
+                        // TODO (acasey): _transportManager.BindAsync is the problem - it pull in certs
                         options.EndPoint = await _multiplexedConnectionBinder!.BindAsync(_transportManager.BindAsync, configuredEndpoint, multiplexedConnectionDelegate, options, onBindCancellationToken).ConfigureAwait(false);
                     }
                 }
@@ -453,6 +454,7 @@ internal sealed class KestrelServerImpl : IServer
     }
 }
 
+// TODO (acasey): delete
 internal delegate Task<EndPoint> MultiplexedConnectionBindAsync(
     EndPoint endPoint,
     MultiplexedConnectionDelegate multiplexedConnectionDelegate,

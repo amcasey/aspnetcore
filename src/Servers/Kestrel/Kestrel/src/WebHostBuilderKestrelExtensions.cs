@@ -55,8 +55,6 @@ public static class WebHostBuilderKestrelExtensions
                 // https://github.com/dotnet/runtime/blob/a5f3676cc71e176084f0f7f1f6beeecd86fbeafc/src/libraries/System.Net.Http/src/System/Net/Http/SocketsHttpHandler/ConnectHelper.cs#L118-L119
                 options.DefaultStreamErrorCode = (long)Http3ErrorCode.RequestCancelled;
                 options.DefaultCloseErrorCode = (long)Http3ErrorCode.NoError;
-
-                // TODO (acasey): set a flag indicating this was called
             });
         }
     }
