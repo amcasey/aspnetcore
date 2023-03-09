@@ -391,12 +391,12 @@ public class KestrelServerOptions
             throw new InvalidOperationException($"{nameof(ApplicationServices)} must not be null. This is normally set automatically via {nameof(IConfigureOptions<KestrelServerOptions>)}.");
         }
 
-        DisableDefaultCertificate = false;
-
         var hostEnvironment = ApplicationServices.GetRequiredService<IHostEnvironment>();
         var serverLogger = ApplicationServices.GetRequiredService<ILogger<KestrelServer>>();
         var httpsLogger = ApplicationServices.GetRequiredService<ILogger<HttpsConnectionMiddleware>>();
         var tlsLoader = ApplicationServices.GetService<ITlsConfigurationLoader>();
+
+        DisableDefaultCertificate = tlsLoader is null;
 
         var loader = new KestrelConfigurationLoader(this, config, reloadOnChange, tlsLoader);
         ConfigurationLoader = loader;

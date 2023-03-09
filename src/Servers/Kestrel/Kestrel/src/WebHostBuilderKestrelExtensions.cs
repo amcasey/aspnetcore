@@ -33,7 +33,14 @@ public static class WebHostBuilderKestrelExtensions
     public static IWebHostBuilder UseKestrelSlim(this IWebHostBuilder hostBuilder)
     {
         // Since we are not calling hostBuilder.UseQuic, the IMultiplexedConnectionListenerFactory will never be registered with DI
-        return UseKestrelWorker(hostBuilder, useQuic: null);
+        return UseKestrelWorker(hostBuilder)
+            .ConfigureServices(services =>
+            {
+                services.Configure<KestrelServerOptions>(options =>
+                {
+                    options.DisableDefaultCertificate = true;
+                });
+            });
     }
 
     /// <summary>
@@ -47,30 +54,23 @@ public static class WebHostBuilderKestrelExtensions
     /// </returns>
     public static IWebHostBuilder UseKestrel(this IWebHostBuilder hostBuilder)
     {
-        return UseKestrelWorker(hostBuilder, UseQuic);
-
-        static void UseQuic(IWebHostBuilder hostBuilder)
-        {
-            hostBuilder
-                .UseQuic(options =>
-                {
-                    // Configure server defaults to match client defaults.
-                    // https://github.com/dotnet/runtime/blob/a5f3676cc71e176084f0f7f1f6beeecd86fbeafc/src/libraries/System.Net.Http/src/System/Net/Http/SocketsHttpHandler/ConnectHelper.cs#L118-L119
-                    options.DefaultStreamErrorCode = (long)Http3ErrorCode.RequestCancelled;
-                    options.DefaultCloseErrorCode = (long)Http3ErrorCode.NoError;
-                })
-                // TODO (acasey): extract this into an extension method - UseHttpsConfiguration?
-                .ConfigureServices(services =>
-                {
-                    services.AddSingleton<IMultiplexedTransportManager, MultiplexedTransportManager>();
-                    services.AddSingleton<ITlsConfigurationLoader, TlsConfigurationLoader>();
-                });
-        }
+        return UseKestrelWorker(hostBuilder)
+            .UseQuic(options =>
+            {
+                // Configure server defaults to match client defaults.
+                // https://github.com/dotnet/runtime/blob/a5f3676cc71e176084f0f7f1f6beeecd86fbeafc/src/libraries/System.Net.Http/src/System/Net/Http/SocketsHttpHandler/ConnectHelper.cs#L118-L119
+                options.DefaultStreamErrorCode = (long)Http3ErrorCode.RequestCancelled;
+                options.DefaultCloseErrorCode = (long)Http3ErrorCode.NoError;
+            })
+            // TODO (acasey): extract this into an extension method - UseHttpsConfiguration?
+            .ConfigureServices(services =>
+            {
+                services.AddSingleton<IMultiplexedTransportManager, MultiplexedTransportManager>();
+                services.AddSingleton<ITlsConfigurationLoader, TlsConfigurationLoader>();
+            });
     }
 
-    private static IWebHostBuilder UseKestrelWorker(
-        this IWebHostBuilder hostBuilder,
-        Action<IWebHostBuilder>? useQuic)
+    private static IWebHostBuilder UseKestrelWorker(this IWebHostBuilder hostBuilder)
     {
         hostBuilder.ConfigureServices(services =>
         {
@@ -80,17 +80,9 @@ public static class WebHostBuilderKestrelExtensions
             services.AddTransient<IConfigureOptions<KestrelServerOptions>, KestrelServerOptionsSetup>();
 
             services.AddSingleton<ServiceContext>();
-            services.TryAddSingleton<ITransportManager, TransportManager>();
-
+            services.AddSingleton<ITransportManager, TransportManager>();
             services.AddSingleton<IServer, KestrelServerImpl>();
-
-            services.Configure<KestrelServerOptions>(options =>
-            {
-                options.DisableDefaultCertificate = true;
-            });
         });
-
-        useQuic?.Invoke(hostBuilder);
 
         if (OperatingSystem.IsWindows())
         {
