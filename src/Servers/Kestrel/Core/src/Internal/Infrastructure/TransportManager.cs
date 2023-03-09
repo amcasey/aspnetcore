@@ -32,7 +32,6 @@ internal sealed class TransportManager
         _serviceContext = serviceContext;
     }
 
-    private ConnectionManager ConnectionManager => _serviceContext.ConnectionManager;
     private KestrelTrace Trace => _serviceContext.Log;
 
     public async Task<EndPoint> BindAsync(EndPoint endPoint, ConnectionDelegate connectionDelegate, EndpointConfig? endpointConfig, CancellationToken cancellationToken)
@@ -68,7 +67,6 @@ internal sealed class TransportManager
     {
         if (_multiplexedTransportFactories.Count == 0)
         {
-            // TODO (acasey): update to mention UseKestrelSlim
             throw new InvalidOperationException($"Cannot bind with {nameof(MultiplexedConnectionDelegate)} no {nameof(IMultiplexedConnectionListenerFactory)} is registered.");
         }
 

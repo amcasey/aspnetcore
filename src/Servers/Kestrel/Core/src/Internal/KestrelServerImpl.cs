@@ -159,11 +159,6 @@ internal sealed class KestrelServerImpl : IServer
 
                 // Filter out invalid combinations.
 
-                if (hasHttp3 && Options.ApplicationServices.GetService(typeof(MultiplexedConnectionMarkerService)) is null)
-                {
-                    throw new InvalidOperationException("You need to call UseQuic"); // TODO (acasey): message
-                }
-
                 if (!hasTls)
                 {
                     // Http/1 without TLS, no-op HTTP/2 and 3.
@@ -189,6 +184,11 @@ internal sealed class KestrelServerImpl : IServer
                     {
                         throw new InvalidOperationException("HTTP/3 requires HTTPS.");
                     }
+                }
+
+                if (hasHttp3 && Options.ApplicationServices.GetService(typeof(MultiplexedConnectionMarkerService)) is null)
+                {
+                    throw new InvalidOperationException("You need to call UseQuic"); // TODO (acasey): message
                 }
 
                 // Quic isn't registered if it's not supported, throw if we can't fall back to 1 or 2
