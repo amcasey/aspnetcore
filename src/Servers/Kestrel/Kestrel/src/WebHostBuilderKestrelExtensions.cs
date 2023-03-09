@@ -4,6 +4,7 @@
 using System.Net.Http;
 using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Hosting.Server;
+using Microsoft.AspNetCore.Server.Kestrel;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.AspNetCore.Server.Kestrel.Core.Internal;
 using Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure;
@@ -62,6 +63,7 @@ public static class WebHostBuilderKestrelExtensions
                 .ConfigureServices(services =>
                 {
                     services.AddSingleton<IMultiplexedTransportManager, MultiplexedTransportManager>();
+                    services.AddSingleton<ITlsConfigurationLoader, TlsConfigurationLoader>();
                 });
         }
     }

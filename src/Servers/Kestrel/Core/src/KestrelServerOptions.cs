@@ -211,7 +211,7 @@ public class KestrelServerOptions
     /// <remarks>
     /// Defaults to false.
     /// </remarks>
-    internal bool DisableDefaultCertificate { get; set; }
+    internal bool DisableDefaultCertificate { get; set; } // TODO (acasey): delete?
 
     /// <summary>
     /// Specifies a configuration Action to run for each newly created endpoint. Calling this again will replace
@@ -396,26 +396,9 @@ public class KestrelServerOptions
         var hostEnvironment = ApplicationServices.GetRequiredService<IHostEnvironment>();
         var serverLogger = ApplicationServices.GetRequiredService<ILogger<KestrelServer>>();
         var httpsLogger = ApplicationServices.GetRequiredService<ILogger<HttpsConnectionMiddleware>>();
+        var tlsLoader = ApplicationServices.GetService<ITlsConfigurationLoader>();
 
-        var loader = KestrelConfigurationLoader.CreateLoader(this, config, hostEnvironment, reloadOnChange, serverLogger, httpsLogger);
-        ConfigurationLoader = loader;
-        return loader;
-    }
-
-    /// <summary>
-    /// TODO (acasey): doc
-    /// </summary>
-    /// <param name="config">The configuration section for Kestrel.</param>
-    /// <param name="reloadOnChange">
-    /// If <see langword="true"/>, Kestrel will dynamically update endpoint bindings when configuration changes.
-    /// This will only reload endpoints defined in the "Endpoints" section of your <paramref name="config"/>. Endpoints defined in code will not be reloaded.
-    /// </param>
-    /// <returns>A <see cref="KestrelConfigurationLoader"/> for further endpoint configuration.</returns>
-    public KestrelConfigurationLoader ConfigureSlim(IConfiguration config, bool reloadOnChange)
-    {
-        DisableDefaultCertificate = true;
-
-        var loader = KestrelConfigurationLoader.CreateLoaderSlim(this, config, reloadOnChange);
+        var loader = new KestrelConfigurationLoader(this, config, reloadOnChange, tlsLoader);
         ConfigurationLoader = loader;
         return loader;
     }

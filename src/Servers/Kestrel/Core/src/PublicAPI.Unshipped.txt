@@ -1,5 +1,4 @@
 #nullable enable
-Microsoft.AspNetCore.Server.Kestrel.Core.KestrelServerOptions.ConfigureSlim(Microsoft.Extensions.Configuration.IConfiguration! config, bool reloadOnChange) -> Microsoft.AspNetCore.Server.Kestrel.KestrelConfigurationLoader!
 Microsoft.AspNetCore.Server.Kestrel.Core.KestrelServerOptions.ListenNamedPipe(string! pipeName) -> void
 Microsoft.AspNetCore.Server.Kestrel.Core.KestrelServerOptions.ListenNamedPipe(string! pipeName, System.Action<Microsoft.AspNetCore.Server.Kestrel.Core.ListenOptions!>! configure) -> void
 Microsoft.AspNetCore.Server.Kestrel.Core.ListenOptions.PipeName.get -> string?
