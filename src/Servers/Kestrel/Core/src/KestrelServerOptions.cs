@@ -204,6 +204,9 @@ public class KestrelServerOptions
         set => _disableHttp1LineFeedTerminators = value;
     }
 
+    private bool _disableDefaultCertificate;
+    private bool _disableDefaultCertificateSetExplicitly;
+
     /// <summary>
     /// If false, the <see cref="KestrelConfigurationLoader"/>, if any, and the the <see cref="CertificateManager"/>
     /// will be checked for a default certificate.
@@ -211,7 +214,24 @@ public class KestrelServerOptions
     /// <remarks>
     /// Defaults to false.
     /// </remarks>
-    internal bool DisableDefaultCertificate { get; set; } // TODO (acasey): delete?
+    internal bool DisableDefaultCertificate
+    {
+        get
+        {
+            return _disableDefaultCertificate;
+        }
+        set
+        {
+            // TODO (acasey): is this necessary?  Can it just default to true and get false-r?
+            // Can't go from enabled to disabled unless it's in the default state
+            if (!_disableDefaultCertificateSetExplicitly || !value)
+            {
+                _disableDefaultCertificate = value;
+            }
+
+            _disableDefaultCertificateSetExplicitly = true;
+        }
+    }
 
     /// <summary>
     /// Specifies a configuration Action to run for each newly created endpoint. Calling this again will replace
@@ -395,8 +415,6 @@ public class KestrelServerOptions
         var serverLogger = ApplicationServices.GetRequiredService<ILogger<KestrelServer>>();
         var httpsLogger = ApplicationServices.GetRequiredService<ILogger<HttpsConnectionMiddleware>>();
         var tlsLoader = ApplicationServices.GetService<ITlsConfigurationLoader>();
-
-        DisableDefaultCertificate = tlsLoader is null;
 
         var loader = new KestrelConfigurationLoader(this, config, reloadOnChange, tlsLoader);
         ConfigurationLoader = loader;

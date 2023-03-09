@@ -16,7 +16,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel;
 /// </summary>
 public sealed partial class KestrelConfigurationLoader
 {
-    private readonly ITlsConfigurationLoader? _tlsLoader; // TODO (acasey): set this after construction and call reload to enable https?
+    private readonly ITlsConfigurationLoader? _tlsLoader;
     private bool _loaded;
 
     internal KestrelConfigurationLoader(

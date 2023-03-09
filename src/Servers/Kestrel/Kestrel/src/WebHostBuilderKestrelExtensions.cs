@@ -67,6 +67,10 @@ public static class WebHostBuilderKestrelExtensions
             {
                 services.AddSingleton<IMultiplexedTransportManager, MultiplexedTransportManager>();
                 services.AddSingleton<ITlsConfigurationLoader, TlsConfigurationLoader>();
+                services.Configure<KestrelServerOptions>(options =>
+                {
+                    options.DisableDefaultCertificate = false;
+                });
             });
     }
 
