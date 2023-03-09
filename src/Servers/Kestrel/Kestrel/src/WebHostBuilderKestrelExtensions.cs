@@ -22,29 +22,6 @@ public static class WebHostBuilderKestrelExtensions
 {
     /// <summary>
     /// Specify Kestrel as the server to be used by the web host.
-    /// Quic support will not be configured, regardless of other settings.
-    /// </summary>
-    /// <param name="hostBuilder">
-    /// The Microsoft.AspNetCore.Hosting.IWebHostBuilder to configure.
-    /// </param>
-    /// <returns>
-    /// The Microsoft.AspNetCore.Hosting.IWebHostBuilder.
-    /// </returns>
-    public static IWebHostBuilder UseKestrelSlim(this IWebHostBuilder hostBuilder)
-    {
-        // Since we are not calling hostBuilder.UseQuic, the IMultiplexedConnectionListenerFactory will never be registered with DI
-        return UseKestrelWorker(hostBuilder)
-            .ConfigureServices(services =>
-            {
-                services.Configure<KestrelServerOptions>(options =>
-                {
-                    options.DisableDefaultCertificate = true;
-                });
-            });
-    }
-
-    /// <summary>
-    /// Specify Kestrel as the server to be used by the web host.
     /// </summary>
     /// <param name="hostBuilder">
     /// The Microsoft.AspNetCore.Hosting.IWebHostBuilder to configure.
@@ -54,7 +31,7 @@ public static class WebHostBuilderKestrelExtensions
     /// </returns>
     public static IWebHostBuilder UseKestrel(this IWebHostBuilder hostBuilder)
     {
-        return UseKestrelWorker(hostBuilder)
+        return UseKestrelSlim(hostBuilder)
             .UseQuic(options =>
             {
                 // Configure server defaults to match client defaults.
@@ -67,14 +44,21 @@ public static class WebHostBuilderKestrelExtensions
             {
                 services.AddSingleton<IMultiplexedTransportManager, MultiplexedTransportManager>();
                 services.AddSingleton<ITlsConfigurationLoader, TlsConfigurationLoader>();
-                services.Configure<KestrelServerOptions>(options =>
-                {
-                    options.DisableDefaultCertificate = false;
-                });
             });
     }
 
-    private static IWebHostBuilder UseKestrelWorker(this IWebHostBuilder hostBuilder)
+    // TODO (acasey): comment
+    /// <summary>
+    /// Specify Kestrel as the server to be used by the web host.
+    /// Quic support will not be configured, regardless of other settings.
+    /// </summary>
+    /// <param name="hostBuilder">
+    /// The Microsoft.AspNetCore.Hosting.IWebHostBuilder to configure.
+    /// </param>
+    /// <returns>
+    /// The Microsoft.AspNetCore.Hosting.IWebHostBuilder.
+    /// </returns>
+    public static IWebHostBuilder UseKestrelSlim(this IWebHostBuilder hostBuilder)
     {
         hostBuilder.ConfigureServices(services =>
         {
