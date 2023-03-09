@@ -18,8 +18,8 @@ internal sealed class KestrelServerImpl : IServer
 {
     private readonly ServerAddressesFeature _serverAddresses;
 
-    private readonly TransportManager _transportManager;
-    private readonly MultiplexedTransportManager? _multiplexedTransportManager;
+    private readonly ITransportManager _transportManager;
+    private readonly IMultiplexedTransportManager _multiplexedTransportManager;
 
     private readonly SemaphoreSlim _bindSemaphore = new SemaphoreSlim(initialCount: 1);
     private bool _hasStarted;
@@ -31,18 +31,13 @@ internal sealed class KestrelServerImpl : IServer
 
     public KestrelServerImpl(
         ServiceContext serviceContext,
-        TransportManager transportManager)
-        : this(serviceContext, transportManager, multiplexedTransportManager: null)
-    {
-    }
-
-    public KestrelServerImpl(
-        ServiceContext serviceContext,
-        TransportManager transportManager,
-        MultiplexedTransportManager? multiplexedTransportManager)
+        ITransportManager transportManager,
+        IMultiplexedTransportManager multiplexedTransportManager)
 {
-        // TODO (acasey): restore this check
-        // throw new InvalidOperationException(CoreStrings.TransportNotFound);
+        if (!transportManager.HasFactories && !multiplexedTransportManager.HasFactories)
+        {
+            throw new InvalidOperationException(CoreStrings.TransportNotFound);
+        }
 
         ServiceContext = serviceContext;
         _transportManager = transportManager;
@@ -119,14 +114,14 @@ internal sealed class KestrelServerImpl : IServer
                 }
 
                 // Quic isn't registered if it's not supported, throw if we can't fall back to 1 or 2
-                if (hasHttp3 && _multiplexedTransportManager is null && !(hasHttp1 || hasHttp2))
+                if (hasHttp3 && !_multiplexedTransportManager.HasFactories && !(hasHttp1 || hasHttp2))
                 {
                     throw new InvalidOperationException("This platform doesn't support QUIC or HTTP/3.");
                 }
 
                 // Disable adding alt-svc header if endpoint has configured not to or there is no
                 // multiplexed transport factory, which happens if QUIC isn't supported.
-                var addAltSvcHeader = !options.DisableAltSvcHeader && _multiplexedTransportManager is not null;
+                var addAltSvcHeader = !options.DisableAltSvcHeader && _multiplexedTransportManager.HasFactories;
 
                 var configuredEndpoint = options.EndPoint;
 
@@ -135,8 +130,10 @@ internal sealed class KestrelServerImpl : IServer
                     || options.Protocols == HttpProtocols.None) // TODO a test fails because it doesn't throw an exception in the right place
                                                                 // when there is no HttpProtocols in KestrelServer, can we remove/change the test?
                 {
-                    // TODO (acasey) restore this check
-                    // throw new InvalidOperationException($"Cannot start HTTP/1.x or HTTP/2 server if no {nameof(IConnectionListenerFactory)} is registered.");
+                    if (!_transportManager.HasFactories)
+                    {
+                        throw new InvalidOperationException($"Cannot start HTTP/1.x or HTTP/2 server if no {nameof(IConnectionListenerFactory)} is registered.");
+                    }
 
                     options.UseHttpServer(ServiceContext, application, options.Protocols, addAltSvcHeader);
                     var connectionDelegate = options.Build();
@@ -147,7 +144,7 @@ internal sealed class KestrelServerImpl : IServer
                     options.EndPoint = await _transportManager.BindAsync(configuredEndpoint, connectionDelegate, options.EndpointConfig, onBindCancellationToken).ConfigureAwait(false);
                 }
 
-                if (hasHttp3 && _multiplexedTransportManager is not null)
+                if (hasHttp3 && _multiplexedTransportManager.HasFactories)
                 {
                     // Check if a previous transport has changed the endpoint. If it has then the endpoint is dynamic and we can't guarantee it will work for other transports.
                     // For more details, see https://github.com/dotnet/aspnetcore/issues/42982
@@ -202,6 +199,7 @@ internal sealed class KestrelServerImpl : IServer
         try
         {
             await _transportManager.StopAsync(cancellationToken).ConfigureAwait(false);
+            await _multiplexedTransportManager.StopAsync(cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -304,6 +302,7 @@ internal sealed class KestrelServerImpl : IServer
                 // as the unbinding finished for the given endpoint rather than wait for all transports to unbind first.
                 var configsToStop = endpointsToStop.Select(lo => lo.EndpointConfig!).ToList();
                 await _transportManager.StopEndpointsAsync(configsToStop, combinedCts.Token).ConfigureAwait(false);
+                await _multiplexedTransportManager.StopEndpointsAsync(configsToStop, combinedCts.Token).ConfigureAwait(false);
 
                 foreach (var listenOption in endpointsToStop)
                 {

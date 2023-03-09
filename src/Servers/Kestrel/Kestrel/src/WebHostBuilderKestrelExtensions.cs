@@ -60,7 +60,7 @@ public static class WebHostBuilderKestrelExtensions
                 })
                 .ConfigureServices(services =>
                 {
-                    services.AddSingleton<MultiplexedTransportManager>(); // TODO (acasey): what happens on failure?
+                    services.AddSingleton<IMultiplexedTransportManager, MultiplexedTransportManager>();
                 });
         }
     }
@@ -77,31 +77,24 @@ public static class WebHostBuilderKestrelExtensions
             services.AddTransient<IConfigureOptions<KestrelServerOptions>, KestrelServerOptionsSetup>();
 
             services.AddSingleton<ServiceContext>();
+            services.TryAddSingleton<ITransportManager, TransportManager>();
+
+            services.AddSingleton<IServer, KestrelServerImpl>();
+
+            services.Configure<KestrelServerOptions>(options =>
+            {
+                options.DisableDefaultCertificate = true;
+            });
         });
 
         useQuic?.Invoke(hostBuilder);
-
-        hostBuilder.ConfigureServices(services =>
-        {
-            services.TryAddSingleton<TransportManager>();
-
-            // TODO (acasey): throw if neither manager worked?
-
-            services.AddSingleton<IServer, KestrelServerImpl>();
-        });
 
         if (OperatingSystem.IsWindows())
         {
             hostBuilder.UseNamedPipes();
         }
 
-        return hostBuilder.ConfigureServices((_context, services) =>
-        {
-            services.Configure<KestrelServerOptions>(options =>
-            {
-                options.DisableDefaultCertificate = true;
-            });
-        });
+        return hostBuilder;
     }
 
     /// <summary>

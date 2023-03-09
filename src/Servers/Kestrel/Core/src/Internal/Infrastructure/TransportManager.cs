@@ -27,6 +27,8 @@ internal abstract class TransportManagerBase
 
     protected KestrelTrace Trace => _serviceContext.Log;
 
+    public abstract bool HasFactories { get; }
+
     protected static bool CanBindFactory(EndPoint endPoint, IConnectionListenerFactorySelector? selector)
     {
         // By default, the last registered factory binds to the endpoint.
@@ -127,7 +129,27 @@ internal abstract class TransportManagerBase
     }
 }
 
-internal sealed class TransportManager : TransportManagerBase
+internal interface ITransportManager
+{
+    bool HasFactories { get; }
+
+    Task<EndPoint> BindAsync(EndPoint endPoint, ConnectionDelegate connectionDelegate, EndpointConfig? endpointConfig, CancellationToken cancellationToken);
+
+    Task StopAsync(CancellationToken cancellationToken);
+    Task StopEndpointsAsync(List<EndpointConfig> endpointsToStop, CancellationToken cancellationToken);
+}
+
+internal interface IMultiplexedTransportManager
+{
+    bool HasFactories { get; }
+
+    Task<EndPoint> BindAsync(EndPoint endPoint, MultiplexedConnectionDelegate multiplexedConnectionDelegate, ListenOptions listenOptions, CancellationToken cancellationToken);
+
+    Task StopAsync(CancellationToken cancellationToken);
+    Task StopEndpointsAsync(List<EndpointConfig> endpointsToStop, CancellationToken cancellationToken);
+}
+
+internal sealed class TransportManager : TransportManagerBase, ITransportManager
 {
     private readonly List<IConnectionListenerFactory> _factories;
 
@@ -139,9 +161,11 @@ internal sealed class TransportManager : TransportManagerBase
         _factories = factories.Reverse().ToList();
     }
 
+    public override bool HasFactories => _factories.Count > 0;
+
     public async Task<EndPoint> BindAsync(EndPoint endPoint, ConnectionDelegate connectionDelegate, EndpointConfig? endpointConfig, CancellationToken cancellationToken)
     {
-        if (_factories.Count == 0)
+        if (!HasFactories)
         {
             throw new InvalidOperationException($"Cannot bind with {nameof(ConnectionDelegate)} no {nameof(IConnectionListenerFactory)} is registered.");
         }
@@ -190,7 +214,7 @@ internal sealed class TransportManager : TransportManagerBase
     }
 }
 
-internal sealed class MultiplexedTransportManager : TransportManagerBase
+internal sealed class MultiplexedTransportManager : TransportManagerBase, IMultiplexedTransportManager
 {
     private readonly List<IMultiplexedConnectionListenerFactory> _factories;
 
@@ -202,9 +226,11 @@ internal sealed class MultiplexedTransportManager : TransportManagerBase
         _factories = factories.Reverse().ToList();
     }
 
+    public override bool HasFactories => _factories.Count > 0;
+
     public async Task<EndPoint> BindAsync(EndPoint endPoint, MultiplexedConnectionDelegate multiplexedConnectionDelegate, ListenOptions listenOptions, CancellationToken cancellationToken)
     {
-        if (_factories.Count == 0)
+        if (!HasFactories)
         {
             throw new InvalidOperationException($"Cannot bind with {nameof(MultiplexedConnectionDelegate)} no {nameof(IMultiplexedConnectionListenerFactory)} is registered.");
         }
