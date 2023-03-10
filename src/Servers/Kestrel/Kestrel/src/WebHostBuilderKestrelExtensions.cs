@@ -21,6 +21,21 @@ namespace Microsoft.AspNetCore.Hosting;
 public static class WebHostBuilderKestrelExtensions
 {
     /// <summary>
+    /// TODO (acasey): doc
+    /// </summary>
+    /// <param name="hostBuilder"></param>
+    /// <returns></returns>
+    public static IWebHostBuilder UseHttpsConfiguration(this IWebHostBuilder hostBuilder)
+    {
+        return hostBuilder.ConfigureServices(services =>
+        {
+            services.AddSingleton<IMultiplexedTransportManager, MultiplexedTransportManager>();
+            services.AddSingleton<ITlsConfigurationLoader, TlsConfigurationLoader>();
+            services.AddSingleton<IUseHttpsHelper, UseHttpsHelper>();
+        });
+    }
+
+    /// <summary>
     /// Specify Kestrel as the server to be used by the web host.
     /// </summary>
     /// <param name="hostBuilder">
@@ -39,13 +54,7 @@ public static class WebHostBuilderKestrelExtensions
                 options.DefaultStreamErrorCode = (long)Http3ErrorCode.RequestCancelled;
                 options.DefaultCloseErrorCode = (long)Http3ErrorCode.NoError;
             })
-            // TODO (acasey): extract this into an extension method - UseHttpsConfiguration?
-            .ConfigureServices(services =>
-            {
-                services.AddSingleton<IMultiplexedTransportManager, MultiplexedTransportManager>();
-                services.AddSingleton<ITlsConfigurationLoader, TlsConfigurationLoader>();
-                services.AddSingleton<IUseHttpsHelper, UseHttpsHelper>();
-            });
+            .UseHttpsConfiguration();
     }
 
     // TODO (acasey): comment
