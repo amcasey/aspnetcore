@@ -4,20 +4,21 @@
 using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateSlimBuilder(args);
-// No logging for benchmark scenario, template has AddConsole();
+
+//builder.WebHost.UseHttpsConfiguration();
+//builder.WebHost.UseQuic(); // Would enable http/3 but not automatically UseHttpsConfiguration
 
 builder.WebHost.ConfigureKestrel((context, options) =>
 {
-    //options.Configure(context.Configuration.GetSection("Kestrel"), reloadOnChange: true);
-
     options.Listen(
         address: System.Net.IPAddress.Any,
         port: 443,
         configure: listenOptions =>
         {
+            // Modifying the service collection here throws, so UseHttps probably can't light things up automatically
             listenOptions.Protocols = Microsoft.AspNetCore.Server.Kestrel.Core.HttpProtocols.Http1;
-            listenOptions.UseHttps();
-            //listenOptions.UseHttps(@"C:\Users\acasey\AppData\Roaming\ASP.NET\https\PlaintextApp.pfx", "1234");
+            listenOptions.UseHttps(); // throws without UseHttpsConfiguration
+            //listenOptions.UseHttps(@"C:\Users\acasey\AppData\Roaming\ASP.NET\https\PlaintextApp.pfx", "1234"); // Works without or without UseHttpsConfiguration
         });
 });
 
