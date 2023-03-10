@@ -4,6 +4,7 @@
 using System.Diagnostics;
 using System.Linq;
 using Microsoft.AspNetCore.Connections;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.AspNetCore.Http.Features;
@@ -18,6 +19,8 @@ internal sealed class KestrelServerImpl : IServer
 {
     private readonly ServerAddressesFeature _serverAddresses;
 
+    private readonly IUseHttpsHelper _useHttpsHelper;
+
     private readonly ITransportManager _transportManager;
     private readonly IMultiplexedTransportManager? _multiplexedTransportManager;
 
@@ -31,13 +34,15 @@ internal sealed class KestrelServerImpl : IServer
 
     public KestrelServerImpl(
         ServiceContext serviceContext,
+        IUseHttpsHelper useHttpsHelper,
         ITransportManager transportManager)
-        : this(serviceContext, transportManager, multiplexedTransportManager: null)
+        : this(serviceContext, useHttpsHelper, transportManager, multiplexedTransportManager: null)
     {
     }
 
     public KestrelServerImpl(
         ServiceContext serviceContext,
+        IUseHttpsHelper useHttpsHelper,
         ITransportManager transportManager,
         IMultiplexedTransportManager? multiplexedTransportManager)
     {
@@ -47,6 +52,7 @@ internal sealed class KestrelServerImpl : IServer
         }
 
         ServiceContext = serviceContext;
+        _useHttpsHelper = useHttpsHelper;
         _transportManager = transportManager;
         _multiplexedTransportManager = multiplexedTransportManager;
 
@@ -169,7 +175,6 @@ internal sealed class KestrelServerImpl : IServer
                         // Add the connection limit middleware
                         multiplexedConnectionDelegate = EnforceConnectionLimit(multiplexedConnectionDelegate, Options.Limits.MaxConcurrentConnections, Trace);
 
-                        // TODO (acasey): _transportManager.BindAsync is the problem - it pull in certs
                         options.EndPoint = await _multiplexedTransportManager!.BindAsync(configuredEndpoint, multiplexedConnectionDelegate, options, onBindCancellationToken).ConfigureAwait(false);
                     }
                 }
@@ -261,8 +266,7 @@ internal sealed class KestrelServerImpl : IServer
 
             Options.ConfigurationLoader?.Load();
 
-            // TODO (acasey): usehttps
-            await AddressBinder.BindAsync(Options.ListenOptions, AddressBindContext!, _options => throw new InvalidOperationException(), cancellationToken).ConfigureAwait(false);
+            await AddressBinder.BindAsync(Options.ListenOptions, AddressBindContext!, _useHttpsHelper, cancellationToken).ConfigureAwait(false);
             _configChangedRegistration = reloadToken?.RegisterChangeCallback(TriggerRebind, this);
         }
         finally

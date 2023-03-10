@@ -275,3 +275,24 @@ public static class ListenOptionsHttpsExtensions
         return listenOptions;
     }
 }
+
+internal interface IUseHttpsHelper
+{
+    ListenOptions UseHttps(ListenOptions listenOptions);
+}
+
+internal sealed class UseHttpsHelper : IUseHttpsHelper // TODO (acasey): name
+{
+    public ListenOptions UseHttps(ListenOptions listenOptions)
+    {
+        return listenOptions.UseHttps();
+    }
+}
+
+internal sealed class InvalidUseHttpsHelper : IUseHttpsHelper // TODO (acasey): name
+{
+    public ListenOptions UseHttps(ListenOptions listenOptions)
+    {
+        throw new InvalidOperationException(); // TODO (acasey): message
+    }
+}

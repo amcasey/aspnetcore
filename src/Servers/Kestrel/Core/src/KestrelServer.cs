@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Microsoft.AspNetCore.Connections;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Server.Kestrel.Core.Internal;
@@ -31,6 +32,7 @@ public class KestrelServer : IServer
         var serviceContext = new ServiceContext(options, loggerFactory);
         _innerKestrelServer = new KestrelServerImpl(
             serviceContext,
+            new UseHttpsHelper(),
             new TransportManager(serviceContext, new[] { transportFactory }));
     }
 

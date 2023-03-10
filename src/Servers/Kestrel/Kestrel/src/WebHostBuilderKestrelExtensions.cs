@@ -44,6 +44,7 @@ public static class WebHostBuilderKestrelExtensions
             {
                 services.AddSingleton<IMultiplexedTransportManager, MultiplexedTransportManager>();
                 services.AddSingleton<ITlsConfigurationLoader, TlsConfigurationLoader>();
+                services.AddSingleton<IUseHttpsHelper, UseHttpsHelper>();
             });
     }
 
@@ -70,6 +71,8 @@ public static class WebHostBuilderKestrelExtensions
             services.AddSingleton<ServiceContext>();
             services.AddSingleton<ITransportManager, TransportManager>();
             services.AddSingleton<IServer, KestrelServerImpl>();
+
+            services.AddSingleton<IUseHttpsHelper, InvalidUseHttpsHelper>();
         });
 
         if (OperatingSystem.IsWindows())
