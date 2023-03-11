@@ -121,17 +121,21 @@ internal sealed class KestrelServerImpl : IServer
                     }
                 }
 
-                if (hasHttp3 && Options.ApplicationServices.GetService(typeof(MultiplexedConnectionMarkerService)) is null)
-                {
-                    throw new InvalidOperationException("You need to call UseQuic"); // TODO (acasey): message
-                }
-
                 bool haveMultiplexedFactories = _multiplexedTransportManager?.HasFactories == true;
 
-                // Quic isn't registered if it's not supported, throw if we can't fall back to 1 or 2
-                if (hasHttp3 && !haveMultiplexedFactories && !(hasHttp1 || hasHttp2))
+                if (hasHttp3 && !haveMultiplexedFactories)
                 {
-                    throw new InvalidOperationException("This platform doesn't support QUIC or HTTP/3.");
+                    // TODO (acasey): make this work with tests
+                    //if (Options.ApplicationServices.GetService(typeof(MultiplexedConnectionMarkerService)) is null)
+                    //{
+                    //    throw new InvalidOperationException("You need to call UseQuic"); // TODO (acasey): message
+                    //}
+
+                    // Quic isn't registered if it's not supported, throw if we can't fall back to 1 or 2
+                    if (!(hasHttp1 || hasHttp2))
+                    {
+                        throw new InvalidOperationException("This platform doesn't support QUIC or HTTP/3.");
+                    }
                 }
 
                 // Disable adding alt-svc header if endpoint has configured not to or there is no
