@@ -69,22 +69,6 @@ internal sealed class IISHttpContextOfT<TContext> : IISHttpContext where TContex
                 // Dispose
             }
 
-            if (!success && HasResponseStarted && AdvancedHttp2FeaturesSupported())
-            {
-                // HTTP/2 INTERNAL_ERROR = 0x2 https://tools.ietf.org/html/rfc7540#section-7
-                // Otherwise the default is Cancel = 0x8 (h2) or 0x010c (h3).
-                if (HttpVersion == System.Net.HttpVersion.Version20)
-                {
-                    // HTTP/2 INTERNAL_ERROR = 0x2 https://tools.ietf.org/html/rfc7540#section-7
-                    SetResetCode(2);
-                }
-                else if (HttpVersion == System.Net.HttpVersion.Version30)
-                {
-                    // HTTP/3 H3_INTERNAL_ERROR = 0x0102 https://quicwg.org/base-drafts/draft-ietf-quic-http.html#section-8.1
-                    SetResetCode(0x0102);
-                }
-            }
-
             if (!_requestAborted)
             {
                 await ProduceEnd();

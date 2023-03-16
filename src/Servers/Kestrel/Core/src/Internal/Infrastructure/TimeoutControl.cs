@@ -3,7 +3,6 @@
 
 using System.Diagnostics;
 using Microsoft.AspNetCore.Server.Kestrel.Core.Features;
-using Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http2.FlowControl;
 
 namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure;
 
@@ -20,7 +19,6 @@ internal sealed class TimeoutControl : ITimeoutControl, IConnectionTimeoutFeatur
     private bool _readTimingPauseRequested;
     private long _readTimingElapsedTicks;
     private long _readTimingBytesRead;
-    private InputFlowControl? _connectionInputFlowControl;
     // The following are always 0 or 1 for HTTP/1.x
     private int _concurrentIncompleteRequestBodies;
     private int _concurrentAwaitingReads;
@@ -75,24 +73,6 @@ internal sealed class TimeoutControl : ITimeoutControl, IConnectionTimeoutFeatur
         // when draining the request body. Since there's already a (short) timeout set for draining,
         // it's safe to not check the data rate at this point.
         if (Interlocked.Read(ref _timeoutTimestamp) != long.MaxValue)
-        {
-            return;
-        }
-
-        // HTTP/2
-        // Don't enforce the rate timeout if there is back pressure due to HTTP/2 connection-level input
-        // flow control. We don't consider stream-level flow control, because we wouldn't be timing a read
-        // for any stream that didn't have a completely empty stream-level flow control window.
-        //
-        // HTTP/3
-        // This isn't (currently) checked. Reasons:
-        // - We're not sure how often people in the real-world run into this. If it
-        //   becomes a problem then we'll need to revisit.
-        // - There isn't a way to get this information easily and efficently from msquic.
-        // - With QUIC, bytes can be received out of order. The connection window could
-        //   be filled up out of order so that availablility is low but there is still
-        //   no data available to use. Would need a smarter way to handle this situation.
-        if (_connectionInputFlowControl?.IsAvailabilityLow == true)
         {
             return;
         }
@@ -187,11 +167,6 @@ internal sealed class TimeoutControl : ITimeoutControl, IConnectionTimeoutFeatur
 
         // Add Heartbeat.Interval since this can be called right before the next heartbeat.
         Interlocked.Exchange(ref _timeoutTimestamp, Interlocked.Read(ref _lastTimestamp) + ticks + Heartbeat.Interval.Ticks);
-    }
-
-    public void InitializeHttp2(InputFlowControl connectionInputFlowControl)
-    {
-        _connectionInputFlowControl = connectionInputFlowControl;
     }
 
     public void StartRequestBody(MinDataRate minRate)

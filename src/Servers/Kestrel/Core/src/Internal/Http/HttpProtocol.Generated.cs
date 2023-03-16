@@ -1,9 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System;
 using System.Collections;
-using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 
 using Microsoft.AspNetCore.Connections.Features;
@@ -67,7 +65,6 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http
         internal protected IHttpResponseTrailersFeature? _currentIHttpResponseTrailersFeature;
         internal protected ITlsConnectionFeature? _currentITlsConnectionFeature;
         internal protected IHttpWebSocketFeature? _currentIHttpWebSocketFeature;
-        internal protected IHttp2StreamIdFeature? _currentIHttp2StreamIdFeature;
         internal protected IHttpMinRequestBodyDataRateFeature? _currentIHttpMinRequestBodyDataRateFeature;
         internal protected IHttpMinResponseDataRateFeature? _currentIHttpMinResponseDataRateFeature;
         internal protected IHttpResetFeature? _currentIHttpResetFeature;
@@ -108,7 +105,6 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http
             _currentIHttpResponseTrailersFeature = null;
             _currentITlsConnectionFeature = null;
             _currentIHttpWebSocketFeature = null;
-            _currentIHttp2StreamIdFeature = null;
             _currentIHttpMinRequestBodyDataRateFeature = null;
             _currentIHttpMinResponseDataRateFeature = null;
             _currentIHttpResetFeature = null;
@@ -280,10 +276,6 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http
                 {
                     feature = _currentIBadRequestExceptionFeature;
                 }
-                else if (key == typeof(IHttp2StreamIdFeature))
-                {
-                    feature = _currentIHttp2StreamIdFeature;
-                }
                 else if (key == typeof(IHttpRequestLifetimeFeature))
                 {
                     feature = _currentIHttpRequestLifetimeFeature;
@@ -423,10 +415,6 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http
                 else if (key == typeof(IBadRequestExceptionFeature))
                 {
                     _currentIBadRequestExceptionFeature = (IBadRequestExceptionFeature?)value;
-                }
-                else if (key == typeof(IHttp2StreamIdFeature))
-                {
-                    _currentIHttp2StreamIdFeature = (IHttp2StreamIdFeature?)value;
                 }
                 else if (key == typeof(IHttpRequestLifetimeFeature))
                 {
@@ -569,10 +557,6 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http
             else if (typeof(TFeature) == typeof(IBadRequestExceptionFeature))
             {
                 feature = Unsafe.As<IBadRequestExceptionFeature?, TFeature?>(ref _currentIBadRequestExceptionFeature);
-            }
-            else if (typeof(TFeature) == typeof(IHttp2StreamIdFeature))
-            {
-                feature = Unsafe.As<IHttp2StreamIdFeature?, TFeature?>(ref _currentIHttp2StreamIdFeature);
             }
             else if (typeof(TFeature) == typeof(IHttpRequestLifetimeFeature))
             {
@@ -722,10 +706,6 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http
             {
                 _currentIBadRequestExceptionFeature = Unsafe.As<TFeature?, IBadRequestExceptionFeature?>(ref feature);
             }
-            else if (typeof(TFeature) == typeof(IHttp2StreamIdFeature))
-            {
-                _currentIHttp2StreamIdFeature = Unsafe.As<TFeature?, IHttp2StreamIdFeature?>(ref feature);
-            }
             else if (typeof(TFeature) == typeof(IHttpRequestLifetimeFeature))
             {
                 _currentIHttpRequestLifetimeFeature = Unsafe.As<TFeature?, IHttpRequestLifetimeFeature?>(ref feature);
@@ -861,10 +841,6 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http
             if (_currentIBadRequestExceptionFeature != null)
             {
                 yield return new KeyValuePair<Type, object>(typeof(IBadRequestExceptionFeature), _currentIBadRequestExceptionFeature);
-            }
-            if (_currentIHttp2StreamIdFeature != null)
-            {
-                yield return new KeyValuePair<Type, object>(typeof(IHttp2StreamIdFeature), _currentIHttp2StreamIdFeature);
             }
             if (_currentIHttpRequestLifetimeFeature != null)
             {

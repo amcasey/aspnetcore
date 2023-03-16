@@ -438,11 +438,6 @@ internal partial class IISHttpContext : IFeatureCollection,
         }
     }
 
-    internal IHttpResponseTrailersFeature? GetResponseTrailersFeature()
-    {
-        return AdvancedHttp2FeaturesSupported() ? this : null;
-    }
-
     IHeaderDictionary IHttpResponseTrailersFeature.Trailers
     {
         get => ResponseTrailers ??= HttpResponseTrailers;
@@ -450,11 +445,6 @@ internal partial class IISHttpContext : IFeatureCollection,
     }
 
     CancellationToken IConnectionLifetimeNotificationFeature.ConnectionClosedRequested { get; set; }
-
-    internal IHttpResetFeature? GetResetFeature()
-    {
-        return AdvancedHttp2FeaturesSupported() ? this : null;
-    }
 
     void IHttpResetFeature.Reset(int errorCode)
     {

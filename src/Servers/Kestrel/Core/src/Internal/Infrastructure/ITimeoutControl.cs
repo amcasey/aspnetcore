@@ -1,8 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http2.FlowControl;
-
 namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure;
 
 internal interface ITimeoutControl
@@ -13,7 +11,6 @@ internal interface ITimeoutControl
     void ResetTimeout(long ticks, TimeoutReason timeoutReason);
     void CancelTimeout();
 
-    void InitializeHttp2(InputFlowControl connectionInputFlowControl);
     void Tick(DateTimeOffset now);
 
     void StartRequestBody(MinDataRate minRate);

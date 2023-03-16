@@ -8,8 +8,6 @@ using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Server.Kestrel.Core.Features;
 using Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http;
-using Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http2;
-using Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http3;
 using Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure;
 using Microsoft.Extensions.Logging;
 
@@ -60,24 +58,13 @@ internal sealed class HttpConnection : ITimeoutHandler
                     requestProcessor = _http1Connection = new Http1Connection<TContext>((HttpConnectionContext)_context);
                     _protocolSelectionState = ProtocolSelectionState.Selected;
                     break;
-                case HttpProtocols.Http2:
-                    // _http2Connection must be initialized before yielding control to the transport thread,
-                    // to prevent a race condition where _http2Connection.Abort() is called just as
-                    // _http2Connection is about to be initialized.
-                    requestProcessor = new Http2Connection((HttpConnectionContext)_context);
-                    _protocolSelectionState = ProtocolSelectionState.Selected;
-                    break;
-                case HttpProtocols.Http3:
-                    requestProcessor = new Http3Connection((HttpMultiplexedConnectionContext)_context);
-                    _protocolSelectionState = ProtocolSelectionState.Selected;
-                    break;
                 case HttpProtocols.None:
                     // An error was already logged in SelectProtocol(), but we should close the connection.
                     break;
 
                 default:
                     // SelectProtocol() only returns Http1, Http2, Http3 or None.
-                    throw new NotSupportedException($"{nameof(SelectProtocol)} returned something other than Http1, Http2 or None.");
+                    throw new NotSupportedException($"{nameof(SelectProtocol)} returned something other than Http1 or None.");
             }
 
             _requestProcessor = requestProcessor;

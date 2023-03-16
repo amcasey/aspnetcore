@@ -322,29 +322,7 @@ public class KestrelServerLimits
         writer.WriteString(nameof(MinRequestBodyDataRate), MinRequestBodyDataRate?.ToString());
         writer.WriteString(nameof(MinResponseDataRate), MinResponseDataRate?.ToString());
         writer.WriteString(nameof(RequestHeadersTimeout), RequestHeadersTimeout.ToString());
-
-        // HTTP2
-        writer.WritePropertyName(nameof(Http2));
-        writer.WriteStartObject();
-        Http2.Serialize(writer);
-        writer.WriteEndObject();
-
-        // HTTP3
-        writer.WritePropertyName(nameof(Http3));
-        writer.WriteStartObject();
-        Http3.Serialize(writer);
-        writer.WriteEndObject();
     }
-
-    /// <summary>
-    /// Limits only applicable to HTTP/2 connections.
-    /// </summary>
-    public Http2Limits Http2 { get; } = new Http2Limits();
-
-    /// <summary>
-    /// Limits only applicable to HTTP/3 connections.
-    /// </summary>
-    public Http3Limits Http3 { get; } = new Http3Limits();
 
     /// <summary>
     /// Gets or sets the request body minimum data rate in bytes/second.

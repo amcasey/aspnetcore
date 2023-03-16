@@ -6,18 +6,14 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO.Pipelines;
 using Microsoft.AspNetCore.Connections;
-using Microsoft.AspNetCore.Connections.Features;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
-using Microsoft.AspNetCore.Internal;
 using Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure;
 
 namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http;
 
 internal partial class Http1Connection : HttpProtocol, IRequestProcessor, IHttpOutputAborter
 {
-    internal static ReadOnlySpan<byte> Http2GoAwayHttp11RequiredBytes => new byte[17] { 0, 0, 8, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 13 };
-
     private const byte ByteCR = (byte)'\r';
     private const byte ByteLF = (byte)'\n';
     private const byte ByteAsterisk = (byte)'*';
@@ -45,9 +41,6 @@ internal partial class Http1Connection : HttpProtocol, IRequestProcessor, IHttpO
     private Uri? _parsedAbsoluteRequestTarget;
 
     private long _remainingRequestHeadersBytesAllowed;
-
-    // Tracks whether a HTTP/2 preface was detected during the first request.
-    private bool _http2PrefaceDetected;
 
     public Http1Connection(HttpConnectionContext context)
     {
@@ -695,14 +688,6 @@ internal partial class Http1Connection : HttpProtocol, IRequestProcessor, IHttpO
             }
             throw;
         }
-#pragma warning disable CS0618 // Type or member is obsolete
-        catch (BadHttpRequestException ex)
-        {
-            DetectHttp2Preface(result.Buffer, ex);
-
-            throw;
-        }
-#pragma warning restore CS0618 // Type or member is obsolete
         finally
         {
             Input.AdvanceTo(reader.Position, isConsumed ? reader.Position : result.Buffer.End);
@@ -747,46 +732,6 @@ internal partial class Http1Connection : HttpProtocol, IRequestProcessor, IHttpO
         {
             return false;
         }
-    }
-
-#pragma warning disable CS0618 // Type or member is obsolete
-    private void DetectHttp2Preface(ReadOnlySequence<byte> requestData, BadHttpRequestException ex)
-#pragma warning restore CS0618 // Type or member is obsolete
-    {
-        const int PrefaceLineLength = 16;
-
-        // Only check for HTTP/2 preface on non-TLS connection.
-        // When TLS is used then ALPN is used to negotiate correct version.
-        if (ConnectionFeatures.Get<ITlsHandshakeFeature>() == null)
-        {
-            // If there is an unrecognized HTTP version, it is the first request on the connection, and the request line
-            // bytes matches the HTTP/2 preface request line bytes then log and return a HTTP/2 GOAWAY frame.
-            if (ex.Reason == RequestRejectionReason.UnrecognizedHTTPVersion
-                && _requestCount == 1
-                && requestData.Length >= PrefaceLineLength)
-            {
-                var clientPrefaceRequestLine = Http2.Http2Connection.ClientPreface.Slice(0, PrefaceLineLength);
-                var currentRequestLine = requestData.Slice(0, PrefaceLineLength).ToSpan();
-                if (currentRequestLine.SequenceEqual(clientPrefaceRequestLine))
-                {
-                    Log.PossibleInvalidHttpVersionDetected(ConnectionId, Http.HttpVersion.Http11, Http.HttpVersion.Http2);
-
-                    // Can't write GOAWAY here. Set flag so TryProduceInvalidRequestResponse writes GOAWAY.
-                    _http2PrefaceDetected = true;
-                }
-            }
-        }
-    }
-
-    protected override Task TryProduceInvalidRequestResponse()
-    {
-        if (_http2PrefaceDetected)
-        {
-            _context.Transport.Output.Write(Http2GoAwayHttp11RequiredBytes);
-            return _context.Transport.Output.FlushAsync().GetAsTask();
-        }
-
-        return base.TryProduceInvalidRequestResponse();
     }
 
     void IRequestProcessor.Tick(DateTimeOffset now) { }

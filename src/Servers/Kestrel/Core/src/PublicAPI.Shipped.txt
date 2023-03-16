@@ -10,8 +10,6 @@ Microsoft.AspNetCore.Server.Kestrel.Core.Features.IConnectionTimeoutFeature.Rese
 Microsoft.AspNetCore.Server.Kestrel.Core.Features.IConnectionTimeoutFeature.SetTimeout(System.TimeSpan timeSpan) -> void
 Microsoft.AspNetCore.Server.Kestrel.Core.Features.IDecrementConcurrentConnectionCountFeature
 Microsoft.AspNetCore.Server.Kestrel.Core.Features.IDecrementConcurrentConnectionCountFeature.ReleaseConnection() -> void
-Microsoft.AspNetCore.Server.Kestrel.Core.Features.IHttp2StreamIdFeature
-Microsoft.AspNetCore.Server.Kestrel.Core.Features.IHttp2StreamIdFeature.StreamId.get -> int
 Microsoft.AspNetCore.Server.Kestrel.Core.Features.IHttpMinRequestBodyDataRateFeature
 Microsoft.AspNetCore.Server.Kestrel.Core.Features.IHttpMinRequestBodyDataRateFeature.MinDataRate.get -> Microsoft.AspNetCore.Server.Kestrel.Core.MinDataRate?
 Microsoft.AspNetCore.Server.Kestrel.Core.Features.IHttpMinRequestBodyDataRateFeature.MinDataRate.set -> void
@@ -20,28 +18,6 @@ Microsoft.AspNetCore.Server.Kestrel.Core.Features.IHttpMinResponseDataRateFeatur
 Microsoft.AspNetCore.Server.Kestrel.Core.Features.IHttpMinResponseDataRateFeature.MinDataRate.set -> void
 Microsoft.AspNetCore.Server.Kestrel.Core.Features.ITlsApplicationProtocolFeature
 Microsoft.AspNetCore.Server.Kestrel.Core.Features.ITlsApplicationProtocolFeature.ApplicationProtocol.get -> System.ReadOnlyMemory<byte>
-Microsoft.AspNetCore.Server.Kestrel.Core.Http2Limits
-Microsoft.AspNetCore.Server.Kestrel.Core.Http2Limits.HeaderTableSize.get -> int
-Microsoft.AspNetCore.Server.Kestrel.Core.Http2Limits.HeaderTableSize.set -> void
-Microsoft.AspNetCore.Server.Kestrel.Core.Http2Limits.Http2Limits() -> void
-Microsoft.AspNetCore.Server.Kestrel.Core.Http2Limits.InitialConnectionWindowSize.get -> int
-Microsoft.AspNetCore.Server.Kestrel.Core.Http2Limits.InitialConnectionWindowSize.set -> void
-Microsoft.AspNetCore.Server.Kestrel.Core.Http2Limits.InitialStreamWindowSize.get -> int
-Microsoft.AspNetCore.Server.Kestrel.Core.Http2Limits.InitialStreamWindowSize.set -> void
-Microsoft.AspNetCore.Server.Kestrel.Core.Http2Limits.KeepAlivePingDelay.get -> System.TimeSpan
-Microsoft.AspNetCore.Server.Kestrel.Core.Http2Limits.KeepAlivePingDelay.set -> void
-Microsoft.AspNetCore.Server.Kestrel.Core.Http2Limits.KeepAlivePingTimeout.get -> System.TimeSpan
-Microsoft.AspNetCore.Server.Kestrel.Core.Http2Limits.KeepAlivePingTimeout.set -> void
-Microsoft.AspNetCore.Server.Kestrel.Core.Http2Limits.MaxFrameSize.get -> int
-Microsoft.AspNetCore.Server.Kestrel.Core.Http2Limits.MaxFrameSize.set -> void
-Microsoft.AspNetCore.Server.Kestrel.Core.Http2Limits.MaxRequestHeaderFieldSize.get -> int
-Microsoft.AspNetCore.Server.Kestrel.Core.Http2Limits.MaxRequestHeaderFieldSize.set -> void
-Microsoft.AspNetCore.Server.Kestrel.Core.Http2Limits.MaxStreamsPerConnection.get -> int
-Microsoft.AspNetCore.Server.Kestrel.Core.Http2Limits.MaxStreamsPerConnection.set -> void
-Microsoft.AspNetCore.Server.Kestrel.Core.Http3Limits
-Microsoft.AspNetCore.Server.Kestrel.Core.Http3Limits.Http3Limits() -> void
-Microsoft.AspNetCore.Server.Kestrel.Core.Http3Limits.MaxRequestHeaderFieldSize.get -> int
-Microsoft.AspNetCore.Server.Kestrel.Core.Http3Limits.MaxRequestHeaderFieldSize.set -> void
 Microsoft.AspNetCore.Server.Kestrel.Core.HttpProtocols
 Microsoft.AspNetCore.Server.Kestrel.Core.HttpProtocols.Http1 = 1 -> Microsoft.AspNetCore.Server.Kestrel.Core.HttpProtocols
 Microsoft.AspNetCore.Server.Kestrel.Core.HttpProtocols.Http1AndHttp2 = Microsoft.AspNetCore.Server.Kestrel.Core.HttpProtocols.Http1 | Microsoft.AspNetCore.Server.Kestrel.Core.HttpProtocols.Http2 -> Microsoft.AspNetCore.Server.Kestrel.Core.HttpProtocols
@@ -104,8 +80,6 @@ Microsoft.AspNetCore.Server.Kestrel.Core.KestrelServer.Options.get -> Microsoft.
 Microsoft.AspNetCore.Server.Kestrel.Core.KestrelServer.StartAsync<TContext>(Microsoft.AspNetCore.Hosting.Server.IHttpApplication<TContext>! application, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
 Microsoft.AspNetCore.Server.Kestrel.Core.KestrelServer.StopAsync(System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
 Microsoft.AspNetCore.Server.Kestrel.Core.KestrelServerLimits
-Microsoft.AspNetCore.Server.Kestrel.Core.KestrelServerLimits.Http2.get -> Microsoft.AspNetCore.Server.Kestrel.Core.Http2Limits!
-Microsoft.AspNetCore.Server.Kestrel.Core.KestrelServerLimits.Http3.get -> Microsoft.AspNetCore.Server.Kestrel.Core.Http3Limits!
 Microsoft.AspNetCore.Server.Kestrel.Core.KestrelServerLimits.KeepAliveTimeout.get -> System.TimeSpan
 Microsoft.AspNetCore.Server.Kestrel.Core.KestrelServerLimits.KeepAliveTimeout.set -> void
 Microsoft.AspNetCore.Server.Kestrel.Core.KestrelServerLimits.KestrelServerLimits() -> void
