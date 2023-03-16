@@ -1,7 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.AspNetCore.Server.Kestrel.Core.Internal;
 using Microsoft.Extensions.DependencyInjection;
@@ -37,9 +36,6 @@ public static class ListenOptionsConnectionLoggingExtensions
         var logger = loggerName == null ? loggerFactory.CreateLogger<LoggingConnectionMiddleware>() : loggerFactory.CreateLogger(loggerName);
 
         listenOptions.Use(next => new LoggingConnectionMiddleware(next, logger).OnConnectionAsync);
-
-        IMultiplexedConnectionBuilder multiplexedConnectionBuilder = listenOptions;
-        multiplexedConnectionBuilder.Use(next => new LoggingMultiplexedConnectionMiddleware(next, logger).OnConnectionAsync);
 
         return listenOptions;
     }

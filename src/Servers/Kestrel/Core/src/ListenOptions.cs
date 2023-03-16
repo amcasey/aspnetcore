@@ -14,7 +14,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core;
 /// Describes either an <see cref="System.Net.IPEndPoint"/>, Unix domain socket path, named pipe name, or a file descriptor for an already open
 /// socket that Kestrel should bind to or open.
 /// </summary>
-public class ListenOptions : IConnectionBuilder, IMultiplexedConnectionBuilder
+public class ListenOptions : IConnectionBuilder
 {
     internal const HttpProtocols DefaultHttpProtocols = HttpProtocols.Http1AndHttp2AndHttp3;
 
@@ -177,12 +177,6 @@ public class ListenOptions : IConnectionBuilder, IMultiplexedConnectionBuilder
         return this;
     }
 
-    IMultiplexedConnectionBuilder IMultiplexedConnectionBuilder.Use(Func<MultiplexedConnectionDelegate, MultiplexedConnectionDelegate> middleware)
-    {
-        _multiplexedMiddleware.Add(middleware);
-        return this;
-    }
-
     /// <summary>
     /// Builds the <see cref="ConnectionDelegate"/>.
     /// </summary>
@@ -197,22 +191,6 @@ public class ListenOptions : IConnectionBuilder, IMultiplexedConnectionBuilder
         for (var i = _middleware.Count - 1; i >= 0; i--)
         {
             var component = _middleware[i];
-            app = component(app);
-        }
-
-        return app;
-    }
-
-    MultiplexedConnectionDelegate IMultiplexedConnectionBuilder.Build()
-    {
-        MultiplexedConnectionDelegate app = context =>
-        {
-            return Task.CompletedTask;
-        };
-
-        for (int i = _multiplexedMiddleware.Count - 1; i >= 0; i--)
-        {
-            var component = _multiplexedMiddleware[i];
             app = component(app);
         }
 

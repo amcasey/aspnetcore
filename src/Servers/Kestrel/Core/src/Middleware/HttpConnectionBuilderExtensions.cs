@@ -16,13 +16,4 @@ internal static class HttpConnectionBuilderExtensions
             return middleware.OnConnectionAsync;
         });
     }
-
-    public static IMultiplexedConnectionBuilder UseHttp3Server<TContext>(this IMultiplexedConnectionBuilder builder, ServiceContext serviceContext, IHttpApplication<TContext> application, HttpProtocols protocols, bool addAltSvcHeader) where TContext : notnull
-    {
-        var middleware = new HttpMultiplexedConnectionMiddleware<TContext>(serviceContext, application, protocols, addAltSvcHeader);
-        return builder.Use(next =>
-        {
-            return middleware.OnConnectionAsync;
-        });
-    }
 }

@@ -121,27 +121,6 @@ internal sealed class KestrelServerImpl : IServer
                     }
                 }
 
-                bool haveMultiplexedFactories = _multiplexedTransportManager?.HasFactories == true;
-
-                if (hasHttp3 && !haveMultiplexedFactories)
-                {
-                    // There will be a IMultiplexedConnectionListenerFactory iff UseQuic was called
-                    if (options.ProtocolsSetExplicitly && Options.ApplicationServices.GetService(typeof(IMultiplexedConnectionListenerFactory)) is null)
-                    {
-                        throw new InvalidOperationException("You need to call UseQuic"); // TODO (acasey): message
-                    }
-
-                    // Quic isn't registered if it's not supported, throw if we can't fall back to 1 or 2
-                    if (!(hasHttp1 || hasHttp2))
-                    {
-                        throw new InvalidOperationException("This platform doesn't support QUIC or HTTP/3.");
-                    }
-                }
-
-                // Disable adding alt-svc header if endpoint has configured not to or there is no
-                // multiplexed transport factory, which happens if QUIC isn't supported.
-                var addAltSvcHeader = !options.DisableAltSvcHeader && haveMultiplexedFactories;
-
                 var configuredEndpoint = options.EndPoint;
 
                 // Add the HTTP middleware as the terminal connection middleware
@@ -154,33 +133,13 @@ internal sealed class KestrelServerImpl : IServer
                         throw new InvalidOperationException($"Cannot start HTTP/1.x or HTTP/2 server if no {nameof(IConnectionListenerFactory)} is registered.");
                     }
 
-                    options.UseHttpServer(ServiceContext, application, options.Protocols, addAltSvcHeader);
+                    options.UseHttpServer(ServiceContext, application, options.Protocols, addAltSvcHeader: false);
                     var connectionDelegate = options.Build();
 
                     // Add the connection limit middleware
                     connectionDelegate = EnforceConnectionLimit(connectionDelegate, Options.Limits.MaxConcurrentConnections, Trace);
 
                     options.EndPoint = await _transportManager.BindAsync(configuredEndpoint, connectionDelegate, options.EndpointConfig, onBindCancellationToken).ConfigureAwait(false);
-                }
-
-                if (hasHttp3 && haveMultiplexedFactories)
-                {
-                    // Check if a previous transport has changed the endpoint. If it has then the endpoint is dynamic and we can't guarantee it will work for other transports.
-                    // For more details, see https://github.com/dotnet/aspnetcore/issues/42982
-                    if (!configuredEndpoint.Equals(options.EndPoint))
-                    {
-                        Trace.LogError(CoreStrings.DynamicPortOnMultipleTransportsNotSupported);
-                    }
-                    else
-                    {
-                        options.UseHttp3Server(ServiceContext, application, options.Protocols, addAltSvcHeader);
-                        var multiplexedConnectionDelegate = ((IMultiplexedConnectionBuilder)options).Build();
-
-                        // Add the connection limit middleware
-                        multiplexedConnectionDelegate = EnforceConnectionLimit(multiplexedConnectionDelegate, Options.Limits.MaxConcurrentConnections, Trace);
-
-                        options.EndPoint = await _multiplexedTransportManager!.BindAsync(configuredEndpoint, multiplexedConnectionDelegate, options, onBindCancellationToken).ConfigureAwait(false);
-                    }
                 }
             }
 

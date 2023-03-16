@@ -28,7 +28,6 @@ public static class WebHostBuilderKestrelExtensions
     {
         return hostBuilder.ConfigureServices(services =>
         {
-            services.AddSingleton<IMultiplexedTransportManager, MultiplexedTransportManager>();
             services.AddSingleton<ITlsConfigurationLoader, TlsConfigurationLoader>();
             services.AddSingleton<IUseHttpsHelper, UseHttpsHelper>();
         });

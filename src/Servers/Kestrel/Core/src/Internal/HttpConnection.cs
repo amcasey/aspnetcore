@@ -172,26 +172,14 @@ internal sealed class HttpConnection : ITimeoutHandler
         var hasTls = _context.ConnectionFeatures.Get<ITlsConnectionFeature>() != null;
         var applicationProtocol = _context.ConnectionFeatures.Get<ITlsApplicationProtocolFeature>()?.ApplicationProtocol
             ?? new ReadOnlyMemory<byte>();
-        var isMultiplexTransport = _context is HttpMultiplexedConnectionContext;
         var http1Enabled = _context.Protocols.HasFlag(HttpProtocols.Http1);
         var http2Enabled = _context.Protocols.HasFlag(HttpProtocols.Http2);
-        var http3Enabled = _context.Protocols.HasFlag(HttpProtocols.Http3);
 
         string? error = null;
 
         if (_context.Protocols == HttpProtocols.None)
         {
             error = CoreStrings.EndPointRequiresAtLeastOneProtocol;
-        }
-
-        if (isMultiplexTransport)
-        {
-            if (http3Enabled)
-            {
-                return HttpProtocols.Http3;
-            }
-
-            error = $"Protocols {_context.Protocols} not supported on multiplexed transport.";
         }
 
         if (!http1Enabled && http2Enabled && hasTls && !Http2Id.SequenceEqual(applicationProtocol.Span))
